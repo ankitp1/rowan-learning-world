@@ -9,3 +9,7 @@ android-tv/build
 android-tv/app/build
 android-tv/app/src/main/assets
 *.apk
+.agents/skills/impeccable/scripts
+.agents/skills/ui-ux-pro-max/data
+.agents/skills/ui-ux-pro-max/scripts/tests
+**/__pycache__

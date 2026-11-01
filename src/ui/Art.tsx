@@ -10,31 +10,33 @@ function PirateSky() {
     <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
       <defs>
         <linearGradient id="psky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#3fb8e6" /><stop offset=".55" stopColor="#9fe0f2" /><stop offset="1" stopColor="#fff0c9" />
+          <stop offset="0" stopColor="#2ea8dc" /><stop offset=".55" stopColor="#94e2f7" /><stop offset="1" stopColor="#fff2c6" />
         </linearGradient>
         <linearGradient id="psea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#2ab0cc" /><stop offset="1" stopColor="#0b4f6c" />
+          <stop offset="0" stopColor="#22b2cf" /><stop offset="1" stopColor="#094660" />
         </linearGradient>
         <radialGradient id="psun">
-          <stop offset="0" stopColor="#fff7c2" /><stop offset=".45" stopColor="#ffe27a" stopOpacity=".8" /><stop offset="1" stopColor="#ffe27a" stopOpacity="0" />
+          <stop offset="0" stopColor="#fff9cc" /><stop offset=".45" stopColor="#ffe27a" stopOpacity=".85" /><stop offset="1" stopColor="#ffe27a" stopOpacity="0" />
         </radialGradient>
       </defs>
       <rect width="1600" height="900" fill="url(#psky)" />
-      <circle cx="1290" cy="200" r="190" fill="url(#psun)" />
-      <circle cx="1290" cy="200" r="60" fill="#fff6b8" />
-      {[[200, 150, 1], [760, 90, 0.7], [1050, 230, 0.85]].map(([x, y, s], i) => (
-        <g key={i} className={`cloud c${i}`} transform={`translate(${x} ${y}) scale(${s})`} fill="#fff" opacity=".92">
-          <ellipse cx="0" cy="0" rx="90" ry="34" /><ellipse cx="-50" cy="-18" rx="50" ry="30" /><ellipse cx="30" cy="-30" rx="58" ry="36" />
+      <circle cx="1290" cy="200" r="200" fill="url(#psun)" />
+      <circle cx="1290" cy="200" r="64" fill="#fff7be" />
+      {[[200, 150, 1], [760, 90, 0.75], [1050, 230, 0.88]].map(([x, y, s], i) => (
+        <g key={i} className={`cloud c${i}`} transform={`translate(${x} ${y}) scale(${s})`} fill="#fff" opacity=".94">
+          <ellipse cx="0" cy="0" rx="92" ry="36" /><ellipse cx="-52" cy="-18" rx="52" ry="32" /><ellipse cx="32" cy="-30" rx="60" ry="38" />
         </g>
       ))}
       <path d="M0 540 q120 -90 240 -20 q80 -50 170 20Z M1100 540 q100 -70 200 -10 q110 -80 300 10Z" fill="#6fb9cf" opacity=".55" />
       <rect y="520" width="1600" height="380" fill="url(#psea)" />
       <g className="ship" transform="translate(330 535)">
         <rect x="-5" y="-190" width="10" height="190" rx="4" fill="#5a3416" />
-        <path d="M8 -180 Q110 -120 8 -40Z" fill="#fff6e0" /><path d="M-8 -165 Q-90 -115 -8 -52Z" fill="#ffefc9" />
-        <path d="M4 -194 l62 14 l-62 14Z" fill="#e63946" />
+        <path d="M8 -180 Q115 -120 8 -40Z" fill="#fff6e0" /><path d="M-8 -165 Q-95 -115 -8 -52Z" fill="#ffefc9" />
+        <path d="M4 -194 l66 14 l-66 14Z" fill="#e63946" />
         <path d="M-120 -4 H120 L84 52 H-84Z" fill="#8a5126" /><path d="M-120 -4 H120 L116 8 H-116Z" fill="#c98a4b" />
-        <circle cx="-40" cy="22" r="7" fill="#3b2410" /><circle cx="0" cy="22" r="7" fill="#3b2410" /><circle cx="40" cy="22" r="7" fill="#3b2410" />
+        <circle cx="-40" cy="22" r="8" fill="#ffd166" stroke="#3b2410" strokeWidth="3" />
+        <circle cx="0" cy="22" r="8" fill="#ffd166" stroke="#3b2410" strokeWidth="3" />
+        <circle cx="40" cy="22" r="8" fill="#ffd166" stroke="#3b2410" strokeWidth="3" />
       </g>
       <path className="wave w1" d={wave(590, 30)} fill="#2aa5c4" opacity=".55" />
       <path className="wave w2" d={wave(660, 36)} fill="#1b86a8" opacity=".7" />
@@ -90,13 +92,102 @@ function SuperSky() {
   );
 }
 
-export function Scenery({ themeId }: { themeId: string }) {
-  return <div className="scenery" aria-hidden>{themeId === 'super' ? <SuperSky /> : <PirateSky />}</div>;
+function PupsSky() {
+  return (
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="pupsky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#1e88e5" /><stop offset=".58" stopColor="#7ad7f0" /><stop offset="1" stopColor="#dbf9f4" />
+        </linearGradient>
+        <linearGradient id="pupbay" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#2ec4b6" /><stop offset="1" stopColor="#0a5c99" />
+        </linearGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#pupsky)" />
+      {/* Rainbow arc over Adventure Bay */}
+      <g opacity=".45" fill="none" strokeWidth="18">
+        <path d="M180 560 A520 520 0 0 1 1180 560" stroke="#ff595e" />
+        <path d="M198 560 A502 502 0 0 1 1162 560" stroke="#ffca3a" />
+        <path d="M216 560 A484 484 0 0 1 1144 560" stroke="#8ac926" />
+        <path d="M234 560 A466 466 0 0 1 1126 560" stroke="#1982c4" />
+      </g>
+      {[[240, 140, 1.05], [780, 110, 0.85], [1220, 170, 0.9]].map(([x, y, s], i) => (
+        <g key={i} className={`cloud c${i}`} transform={`translate(${x} ${y}) scale(${s})`} fill="#fff" opacity=".95">
+          <ellipse cx="0" cy="0" rx="90" ry="34" /><ellipse cx="-48" cy="-18" rx="50" ry="30" /><ellipse cx="32" cy="-28" rx="56" ry="34" />
+        </g>
+      ))}
+      {/* Green coastal hills & Lookout Tower */}
+      <path d="M-40 560 Q220 420 540 550 T1180 530 Q1420 440 1640 550 V700 H-40Z" fill="#52b788" />
+      <path d="M-40 590 Q360 470 760 580 T1640 560 V700 H-40Z" fill="#40916c" />
+      <g transform="translate(1310 470)">
+        <rect x="-26" y="-130" width="52" height="140" rx="12" fill="#f8f9fa" stroke="#adb5bd" strokeWidth="4" />
+        <path d="M-58 -120 H58 L44 -76 H-44Z" fill="#ef233c" />
+        <rect x="-48" y="-154" width="96" height="38" rx="16" fill="#38bdf8" stroke="#fff" strokeWidth="5" />
+        <path d="M-64 -154 Q0 -198 64 -154Z" fill="#ef233c" />
+        <circle cx="0" cy="-98" r="16" fill="#ffbe0b" stroke="#fff" strokeWidth="3" />
+      </g>
+      <rect y="580" width="1600" height="320" fill="url(#pupbay)" />
+      <path className="wave w1" d={wave(620, 26)} fill="#38d9a9" opacity=".45" />
+      <path className="wave w2" d={wave(690, 32)} fill="#15aabf" opacity=".6" />
+    </svg>
+  );
 }
 
-/** Original helper characters: a parrot (pirate) and a little robot (super). */
-export function HelperAvatar({ theme, size = 56, talking = false }: { theme: Theme; size?: number; talking?: boolean }) {
-  const cls = `helper-art${talking ? ' talking' : ''}`;
+function RescueSky() {
+  const glowDots = useMemo(() => Array.from({ length: 34 }, (_, i) => ({
+    x: ((i * 197) % 1540) + 30,
+    y: ((i * 131) % 680) + 80,
+    r: 3 + (i % 4) * 1.5,
+    d: (i % 7) * 0.6,
+  })), []);
+  return (
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="rsky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#0f3d3e" /><stop offset=".5" stopColor="#146c60" /><stop offset="1" stopColor="#99f6e4" />
+        </linearGradient>
+        <linearGradient id="raurora" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#34d399" stopOpacity="0" />
+          <stop offset=".35" stopColor="#a7f3d0" stopOpacity=".45" />
+          <stop offset=".7" stopColor="#f472b6" stopOpacity=".38" />
+          <stop offset="1" stopColor="#fbbf24" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#rsky)" />
+      <path className="wave w1" d="M-200 220 Q260 90 720 210 T1700 180 L1700 320 Q1140 240 680 330 T-200 290Z" fill="url(#raurora)" />
+      {/* Distant misty mountains */}
+      <path d="M-50 620 L220 330 L480 560 L790 290 L1110 550 L1380 340 L1650 620 Z" fill="#115e59" opacity=".65" />
+      <path d="M160 640 L430 390 L690 610 L1020 370 L1310 610 L1650 450 V900 H-50 V640 Z" fill="#0f524c" opacity=".85" />
+      {/* Enchanted forest ridge */}
+      <path d="M-40 670 Q400 580 840 660 T1640 640 V900 H-40Z" fill="#064e3b" />
+      {glowDots.map((g, i) => (
+        <circle key={i} className="star" style={{ animationDelay: `${g.d}s` }} cx={g.x} cy={g.y} r={g.r} fill={i % 3 === 0 ? '#fde68a' : '#a7f3d0'} />
+      ))}
+    </svg>
+  );
+}
+
+export function Scenery({ themeId }: { themeId: string }) {
+  return (
+    <div className="scenery" aria-hidden>
+      {themeId === 'super' ? <SuperSky /> : themeId === 'pups' ? <PupsSky /> : themeId === 'rescue' ? <RescueSky /> : <PirateSky />}
+    </div>
+  );
+}
+
+/** Original helper characters: Pip (pirate parrot), Bolt (super robot), Scout (rescue pup), Blaze (creature dragon-unicorn). */
+export function HelperAvatar({
+  theme,
+  size = 56,
+  talking = false,
+  mood = 'idle',
+}: {
+  theme: Theme;
+  size?: number;
+  talking?: boolean;
+  mood?: 'idle' | 'talking' | 'cheer';
+}) {
+  const cls = `helper-art${talking ? ' talking' : ''}${mood === 'cheer' ? ' cheer' : ''}`;
   if (theme.id === 'super') {
     return (
       <svg className={cls} width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={theme.helper.name}>
@@ -104,15 +195,74 @@ export function HelperAvatar({ theme, size = 56, talking = false }: { theme: The
           <linearGradient id="rbody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#e6ecff" /><stop offset="1" stopColor="#a9b8ff" /></linearGradient>
         </defs>
         <line x1="50" y1="8" x2="50" y2="22" stroke="#6a3df0" strokeWidth="4" strokeLinecap="round" />
-        <circle className="glow" cx="50" cy="8" r="6" fill="#ffd23f" stroke="#fff" strokeWidth="1.5" />
-        <rect x="14" y="40" width="9" height="18" rx="4" fill="#6a3df0" /><rect x="77" y="40" width="9" height="18" rx="4" fill="#6a3df0" />
-        <rect x="22" y="22" width="56" height="50" rx="18" fill="url(#rbody)" stroke="#4a2fc0" strokeWidth="3" />
-        <rect x="30" y="34" width="40" height="24" rx="12" fill="#1b1456" />
-        <g className="blink"><circle cx="42" cy="46" r="6" fill="#59f0ff" /><circle cx="58" cy="46" r="6" fill="#59f0ff" /></g>
-        <circle cx="44" cy="44" r="2" fill="#fff" /><circle cx="60" cy="44" r="2" fill="#fff" />
-        <path className="mouth" d="M43 64 q7 6 14 0" stroke="#4a2fc0" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <circle className="glow" cx="50" cy="8" r="6.5" fill="#ffd23f" stroke="#fff" strokeWidth="2" />
+        <rect x="13" y="40" width="10" height="18" rx="5" fill="#6a3df0" /><rect x="77" y="40" width="10" height="18" rx="5" fill="#6a3df0" />
+        <rect x="22" y="22" width="56" height="50" rx="18" fill="url(#rbody)" stroke="#4a2fc0" strokeWidth="3.5" />
+        <rect x="29" y="33" width="42" height="25" rx="12" fill="#1b1456" />
+        <g className="blink"><circle cx="42" cy="46" r="6.5" fill="#59f0ff" /><circle cx="58" cy="46" r="6.5" fill="#59f0ff" /></g>
+        <circle cx="44" cy="44" r="2.2" fill="#fff" /><circle cx="60" cy="44" r="2.2" fill="#fff" />
+        <path className="mouth" d="M41 64 q9 8 18 0" stroke="#4a2fc0" strokeWidth="3.5" fill="none" strokeLinecap="round" />
         <rect x="32" y="74" width="36" height="20" rx="8" fill="#6a3df0" stroke="#4a2fc0" strokeWidth="3" />
         <path d="M52 77 l-8 9 h6 l-2 7 l9 -11 h-6Z" fill="#ffd23f" />
+      </svg>
+    );
+  }
+  if (theme.id === 'pups') {
+    return (
+      <svg className={cls} width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={theme.helper.name}>
+        <defs>
+          <linearGradient id="pupfur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f6bd60" /><stop offset="1" stopColor="#d9822b" /></linearGradient>
+          <linearGradient id="puphat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ff4d6d" /><stop offset="1" stopColor="#d90429" /></linearGradient>
+        </defs>
+        {/* Floppy ears */}
+        <ellipse cx="22" cy="52" rx="11" ry="22" fill="#7f4f24" transform="rotate(18 22 52)" />
+        <ellipse cx="78" cy="52" rx="11" ry="22" fill="#7f4f24" transform="rotate(-18 78 52)" />
+        {/* Head & cheeks */}
+        <circle cx="50" cy="54" r="28" fill="url(#pupfur)" stroke="#7f4f24" strokeWidth="2.5" />
+        <ellipse cx="50" cy="63" rx="18" ry="14" fill="#fff3dc" />
+        {/* Eyes */}
+        <g className="blink">
+          <circle cx="39" cy="49" r="6.5" fill="#fff" /><circle cx="40" cy="49" r="4" fill="#222" /><circle cx="41.5" cy="47.5" r="1.5" fill="#fff" />
+          <circle cx="61" cy="49" r="6.5" fill="#fff" /><circle cx="60" cy="49" r="4" fill="#222" /><circle cx="61.5" cy="47.5" r="1.5" fill="#fff" />
+        </g>
+        {/* Cute nose & happy mouth */}
+        <ellipse cx="50" cy="58" rx="6.5" ry="4.8" fill="#2b2d42" />
+        <path className="beak" d="M42 66 q8 9 16 0" stroke="#7f4f24" strokeWidth="3.2" fill="#ff758f" strokeLinecap="round" />
+        {/* Rescue helmet with gold badge */}
+        <path d="M23 36 Q50 10 77 36 Z" fill="url(#puphat)" stroke="#8d0801" strokeWidth="2.5" />
+        <rect x="20" y="33" width="60" height="7" rx="3.5" fill="#ffbe0b" />
+        <polygon className="glow" points="50,17 56,23 50,31 44,23" fill="#ffbe0b" stroke="#fff" strokeWidth="1.5" />
+        {/* Collar & badge */}
+        <rect x="33" y="79" width="34" height="8" rx="4" fill="#1982c4" />
+        <circle cx="50" cy="88" r="6" fill="#ffbe0b" stroke="#d9822b" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+  if (theme.id === 'rescue') {
+    return (
+      <svg className={cls} width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={theme.helper.name}>
+        <defs>
+          <linearGradient id="drgbody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#6ee7b7" /><stop offset="1" stopColor="#10b981" /></linearGradient>
+          <linearGradient id="drghorn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fef08a" /><stop offset="1" stopColor="#f59e0b" /></linearGradient>
+        </defs>
+        {/* Little wings */}
+        <path d="M24 58 Q6 42 14 72 Q22 70 28 66Z" fill="#f472b6" stroke="#db2777" strokeWidth="2" />
+        <path d="M76 58 Q94 42 86 72 Q78 70 72 66Z" fill="#f472b6" stroke="#db2777" strokeWidth="2" />
+        {/* Body & belly */}
+        <ellipse cx="50" cy="68" rx="23" ry="22" fill="url(#drgbody)" stroke="#047857" strokeWidth="2.5" />
+        <ellipse cx="50" cy="70" rx="14" ry="15" fill="#fef08a" />
+        {/* Head */}
+        <circle cx="50" cy="42" r="22" fill="url(#drgbody)" stroke="#047857" strokeWidth="2.5" />
+        {/* Magical unicorn horn */}
+        <polygon className="glow" points="50,5 43,24 57,24" fill="url(#drghorn)" stroke="#fff" strokeWidth="1.5" />
+        {/* Eyes & smile */}
+        <g className="blink">
+          <circle cx="41" cy="40" r="6" fill="#fff" /><circle cx="42" cy="40" r="3.6" fill="#1e1b4b" /><circle cx="43" cy="38.5" r="1.4" fill="#fff" />
+          <circle cx="59" cy="40" r="6" fill="#fff" /><circle cx="58" cy="40" r="3.6" fill="#1e1b4b" /><circle cx="59" cy="38.5" r="1.4" fill="#fff" />
+        </g>
+        <circle cx="34" cy="46" r="3.5" fill="#f472b6" opacity=".65" />
+        <circle cx="66" cy="46" r="3.5" fill="#f472b6" opacity=".65" />
+        <path className="beak" d="M43 49 q7 7 14 0" stroke="#065f46" strokeWidth="3" fill="none" strokeLinecap="round" />
       </svg>
     );
   }
@@ -137,7 +287,7 @@ export function HelperAvatar({ theme, size = 56, talking = false }: { theme: The
   );
 }
 
-/** Coin (pirate) or power spark (super). Sizes with the surrounding font-size. */
+/** Collectible icon per theme. Sizes with the surrounding font-size. */
 export function Collectible({ themeId, className = '' }: { themeId: string; className?: string }) {
   if (themeId === 'super') {
     return (
@@ -145,6 +295,27 @@ export function Collectible({ themeId, className = '' }: { themeId: string; clas
         <circle cx="20" cy="20" r="18" fill="#2a1a8a" stroke="#8f7bff" strokeWidth="3" />
         <circle cx="20" cy="20" r="14" fill="none" stroke="#5b3ed8" strokeWidth="1.5" />
         <path d="M23 6 L11 22 h8 l-3 12 L29 17 h-8Z" fill="#ffd23f" stroke="#fff3a8" strokeWidth="1" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (themeId === 'pups') {
+    return (
+      <svg className={`collect ${className}`} viewBox="0 0 40 40" width="1em" height="1em" aria-hidden>
+        <circle cx="20" cy="20" r="18" fill="#ef233c" stroke="#ffbe0b" strokeWidth="3.5" />
+        <ellipse cx="20" cy="24" rx="7" ry="5.5" fill="#ffbe0b" />
+        <circle cx="12.5" cy="15.5" r="3" fill="#ffbe0b" />
+        <circle cx="17.5" cy="12.5" r="3" fill="#ffbe0b" />
+        <circle cx="22.5" cy="12.5" r="3" fill="#ffbe0b" />
+        <circle cx="27.5" cy="15.5" r="3" fill="#ffbe0b" />
+      </svg>
+    );
+  }
+  if (themeId === 'rescue') {
+    return (
+      <svg className={`collect ${className}`} viewBox="0 0 40 40" width="1em" height="1em" aria-hidden>
+        <polygon points="20,3 34,14 28,36 12,36 6,14" fill="#34d399" stroke="#ecfdf5" strokeWidth="2.5" strokeLinejoin="round" />
+        <polygon points="20,3 28,14 20,36 12,14" fill="#a7f3d0" opacity=".65" />
+        <circle cx="15" cy="12" r="2.5" fill="#fff" />
       </svg>
     );
   }
@@ -159,39 +330,57 @@ export function Collectible({ themeId, className = '' }: { themeId: string; clas
   );
 }
 
-/** Island platform: sand + water ring (pirate) or glowing floating pad (super). */
+/** Winding dotted treasure trail connecting the islands on the Hub map. */
+export function MapTrail({ themeId }: { themeId: string }) {
+  const stroke = themeId === 'super' ? '#59f0ff' : themeId === 'pups' ? '#fff' : themeId === 'rescue' ? '#fde68a' : '#fff3b0';
+  return (
+    <svg className="map-trail" viewBox="0 0 1000 180" preserveAspectRatio="none" aria-hidden>
+      <path
+        d="M 90 110 C 240 25, 340 165, 500 85 C 660 10, 760 165, 910 95"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="7"
+        strokeDasharray="16 18"
+        strokeLinecap="round"
+        opacity=".65"
+      />
+    </svg>
+  );
+}
+
+/** Island platform: sand + water ring (pirate/pups), glowing pad (super), or mossy stone (rescue). */
 export function IslandBase({ themeId, tone }: { themeId: string; tone: string }) {
   if (themeId === 'super') {
     return (
       <svg className="island-base" viewBox="0 0 240 150" aria-hidden>
-        <ellipse cx="120" cy="124" rx="86" ry="14" fill="#000" opacity=".25" />
-        <ellipse cx="120" cy="100" rx="96" ry="30" fill={tone} opacity=".35" />
+        <ellipse cx="120" cy="124" rx="86" ry="14" fill="#000" opacity=".28" />
+        <ellipse cx="120" cy="100" rx="98" ry="32" fill={tone} opacity=".38" />
         <path d="M32 84 Q120 128 208 84 L196 108 Q120 146 44 108Z" fill="#2a1a8a" />
-        <ellipse cx="120" cy="84" rx="92" ry="30" fill="#4b33c2" stroke={tone} strokeWidth="4" />
-        <ellipse cx="120" cy="82" rx="70" ry="21" fill={tone} opacity=".25" />
+        <ellipse cx="120" cy="84" rx="92" ry="30" fill="#4b33c2" stroke={tone} strokeWidth="5" />
+        <ellipse cx="120" cy="82" rx="70" ry="21" fill={tone} opacity=".32" />
       </svg>
     );
   }
   return (
     <svg className="island-base" viewBox="0 0 240 150" aria-hidden>
-      <ellipse cx="120" cy="116" rx="112" ry="26" fill="#bdf1ff" opacity=".45" />
-      <ellipse cx="120" cy="116" rx="92" ry="19" fill="#bdf1ff" opacity=".55" />
-      <path d="M24 100 Q40 56 120 54 Q200 56 216 100 Q216 124 120 126 Q24 124 24 100Z" fill={tone} />
-      <path d="M24 100 Q40 56 120 54 Q200 56 216 100 Q190 78 120 78 Q50 78 24 100Z" fill="#fff" opacity=".28" />
-      <path d="M40 112 Q120 132 200 112" stroke="#000" strokeWidth="3" opacity=".12" fill="none" />
+      <ellipse cx="120" cy="118" rx="114" ry="27" fill="#bdf1ff" opacity=".5" />
+      <ellipse cx="120" cy="116" rx="94" ry="20" fill="#fff" opacity=".55" />
+      <path d="M22 100 Q40 52 120 50 Q200 52 218 100 Q218 126 120 128 Q22 126 22 100Z" fill={tone} stroke="#fff" strokeWidth="3" strokeOpacity=".55" />
+      <path d="M26 98 Q42 56 120 54 Q198 56 214 98 Q188 76 120 76 Q52 76 26 98Z" fill="#fff" opacity=".35" />
+      <path d="M40 112 Q120 132 200 112" stroke="#000" strokeWidth="3.5" opacity=".14" fill="none" />
     </svg>
   );
 }
 
-export function Confetti({ count = 36 }: { count?: number }) {
+export function Confetti({ count = 42 }: { count?: number }) {
   const bits = useMemo(() => Array.from({ length: count }, (_, i) => ({
     left: Math.random() * 100, delay: Math.random() * 0.8, dur: 2.2 + Math.random() * 1.8, rot: Math.random() * 360,
-    color: ['#ffd23f', '#ff4d6d', '#4cc9f0', '#80ed99', '#b388ff', '#ff9f1c'][i % 6], w: 8 + Math.random() * 8,
+    color: ['#ffd23f', '#ff4d6d', '#4cc9f0', '#80ed99', '#b388ff', '#ff9f1c'][i % 6], w: 9 + Math.random() * 9,
   })), [count]);
   return (
     <div className="confetti" aria-hidden>
       {bits.map((b, i) => (
-        <i key={i} style={{ left: `${b.left}%`, animationDelay: `${b.delay}s`, animationDuration: `${b.dur}s`, background: b.color, width: b.w, height: b.w * 0.5, transform: `rotate(${b.rot}deg)` }} />
+        <i key={i} style={{ left: `${b.left}%`, animationDelay: `${b.delay}s`, animationDuration: `${b.dur}s`, background: b.color, width: b.w, height: b.w * 0.55, transform: `rotate(${b.rot}deg)` }} />
       ))}
     </div>
   );

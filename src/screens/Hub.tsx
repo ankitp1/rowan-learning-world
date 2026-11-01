@@ -4,11 +4,13 @@ import { patchProfile } from '../core/db';
 import { APPS } from '../core/registry';
 import { THEMES, themeById } from '../core/themes';
 import type { MiniApp, Profile, Subject, Theme } from '../core/types';
-import { HelperAvatar, IslandBase } from '../ui/Art';
+import { HelperAvatar, IslandBase, MapTrail } from '../ui/Art';
 
 const TONE: Record<string, Record<string, string>> = {
   pirate: { reading: '#f6d98a', math: '#ffb3a7', mystery: '#c3aef0', brain: '#9fe3b8', games: '#ffc27a' },
   super: { reading: '#59f0ff', math: '#80ed99', mystery: '#ff7eb6', brain: '#b388ff', games: '#ffd23f' },
+  pups: { reading: '#ffd166', math: '#ff758f', mystery: '#a8dadc', brain: '#95d5b2', games: '#ffbe0b' },
+  rescue: { reading: '#a7f3d0', math: '#fde68a', mystery: '#f9a8d4', brain: '#c4b5fd', games: '#fdba74' },
 };
 
 export type IslandKey = 'reading' | 'math' | 'mystery' | 'brain' | 'games';
@@ -32,6 +34,13 @@ function StickerBook({ profile, theme, onClose }: { profile: Profile; theme: The
       </div>
     </div>
   );
+}
+
+function helperGreeting(theme: Theme, name: string): string {
+  if (theme.id === 'pirate') return `Ahoy, Captain ${name}! Ready for a mission?`;
+  if (theme.id === 'pups') return `Ruff-ruff, Pup Leader ${name}! Ready for a rescue mission?`;
+  if (theme.id === 'rescue') return `Hi Ranger ${name}! Which creature shall we rescue today?`;
+  return `Hi ${name}! Ready for a hero mission?`;
 }
 
 /** The map: one island per subject, plus the big "Start mission" button. */
@@ -68,21 +77,24 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
       <div className="map">
         {theme.decor.map((d, i) => <span key={i} className={`decor d${i}`} aria-hidden>{d}</span>)}
         <div className="hub-helper">
-          <HelperAvatar theme={theme} size={110} talking />
-          <div className="bubble"><p>{theme.id === 'pirate' ? `Ahoy, Captain ${profile.name}! Ready for a mission?` : `Hi ${profile.name}! Ready for a mission?`}</p></div>
+          <HelperAvatar theme={theme} size={114} talking />
+          <div className="bubble"><p>{helperGreeting(theme, profile.name)}</p></div>
         </div>
         <button className="mission-btn" data-autofocus onClick={onMission}>
           <span className="m-emoji">{theme.pieces[0]}</span>
           <span>Start a mission!</span>
         </button>
-        <div className="islands">
-          {shown.map((i) => (
-            <button key={i.key} className={`island ${i.key}`} onClick={() => onIsland(i.key)}>
-              <IslandBase themeId={theme.id} tone={TONE[theme.id]?.[i.key] ?? '#f6d98a'} />
-              <span className="i-emoji">{i.emoji}</span>
-              <span className="i-name">{i.name}</span>
-            </button>
-          ))}
+        <div className="islands-wrap">
+          <MapTrail themeId={theme.id} />
+          <div className="islands">
+            {shown.map((i) => (
+              <button key={i.key} className={`island ${i.key}`} onClick={() => onIsland(i.key)}>
+                <IslandBase themeId={theme.id} tone={TONE[theme.id]?.[i.key] ?? '#f6d98a'} />
+                <span className="i-emoji">{i.emoji}</span>
+                <span className="i-name">{i.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       {book && <StickerBook profile={profile} theme={theme} onClose={() => setBook(false)} />}

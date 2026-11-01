@@ -57,6 +57,58 @@ export const THEMES: Theme[] = [
     praise: ['Super job!', 'Power up, you did it!', 'Hero move!', 'Zoom, nailed it!', 'Mighty work!'],
     decor: ['☁️', '⭐', '🌙', '💫'],
   },
+  {
+    id: 'pups',
+    name: 'Rescue Pups',
+    emoji: '🐾',
+    helper: { name: 'Scout', emoji: '🐶' },
+    colors: { bg1: '#0a5c99', bg2: '#2ec4b6', primary: '#ffbe0b', accent: '#ef233c', card: '#fffdf5', text: '#0d2b45' },
+    collectible: { emoji: '🦴', one: 'pup treat', many: 'pup treats' },
+    container: { emoji: '🎒', name: 'rescue pack' },
+    thief: { emoji: '🐱', name: 'cheeky kitty' },
+    pieces: ['🐾', '🚒'],
+    mapTitle: "Pup Leader {name}'s Bay",
+    islands: {
+      reading: 'Bark Bay Books', math: 'Lookout Numbers', science: 'Critter Clinic',
+      geography: 'Rescue Map HQ', art: 'Pup Paint Park', games: 'Pup Playground',
+    },
+    islandEmoji: { reading: '📚', math: '🚨', science: '🐕', geography: '🗺️', art: '🎨', games: '🥏' },
+    mystery: { name: 'Detective Bay', emoji: '🔍' },
+    brain: { name: 'Pup Training', emoji: '🏅' },
+    missionNames: [
+      'The Case of the Missing Pup Treats', 'Rescue at Adventure Bridge', 'The Lighthouse Bell Mystery',
+      'Operation Golden Bone', 'Lost Kitty on Lookout Hill',
+    ],
+    stickers: ['🐾', '🐶', '🚒', '🚓', '🚁', '🦴', '🏅', '🚨', '🛟', '🐕‍🦺', '🌈', '⭐', '🏆', '🎺', '⛺', '🚤'],
+    praise: ['Pawsome job!', 'No puzzle is too big, no pup is too small!', 'Ruff-ruff rescue!', 'Tail-wagging work!', 'You saved the day!'],
+    decor: ['🐾', '☁️', '🌈', '🦴'],
+  },
+  {
+    id: 'rescue',
+    name: 'Creature Rescue',
+    emoji: '🦄',
+    helper: { name: 'Blaze', emoji: '🐉' },
+    colors: { bg1: '#134e4a', bg2: '#0f766e', primary: '#fbbf24', accent: '#f43f5e', card: '#fefce8', text: '#132a28' },
+    collectible: { emoji: '💎', one: 'magic gem', many: 'magic gems' },
+    container: { emoji: '🧳', name: 'field trunk' },
+    thief: { emoji: '👺', name: 'rascal imp' },
+    pieces: ['🦄', '🐉'],
+    mapTitle: "Ranger {name}'s Sanctuary",
+    islands: {
+      reading: 'Whispering Woods', math: 'Crystal Canyon', science: 'Creature Hollow',
+      geography: 'Explorer Camp', art: 'Sketch Tent', games: 'Campfire Games',
+    },
+    islandEmoji: { reading: '🌲', math: '💎', science: '🦄', geography: '🧭', art: '🎨', games: '🏕️' },
+    mystery: { name: 'Cryptid Cave', emoji: '🔦' },
+    brain: { name: 'Ancient Ruins', emoji: '🏛️' },
+    missionNames: [
+      'Secret of the Baby Unicorn', 'The Dragon Egg Rescue', 'Footprints in the Misty Woods',
+      'The Lost Griffin Feather', 'Mystery of Rainbow Falls',
+    ],
+    stickers: ['🦄', '🐉', '🦕', '🦖', '💎', '🌲', '🍄', '🦋', '🦉', '🦊', '🏔️', '🌈', '🔮', '🧭', '🏕️', '🌟'],
+    praise: ['Magical discovery!', 'Legendary work, Ranger!', 'You rescued the creature!', 'Roar-some job!', 'Brilliant fieldwork!'],
+    decor: ['✨', '🍄', '🦋', '🌲'],
+  },
 ];
 
 export const themeById = (id: string): Theme => THEMES.find((t) => t.id === id) ?? THEMES[0];
@@ -64,14 +116,24 @@ export const themeById = (id: string): Theme => THEMES.find((t) => t.id === id) 
 /** Per-theme surface styling (letter tiles, scenery tint). Pure CSS variables, no code per theme. */
 const SKINS: Record<string, Record<string, string>> = {
   pirate: {
-    '--tile-bg': 'linear-gradient(180deg,#e4ad72,#c2813f)', '--tile-fg': '#4a2a0c', '--tile-edge': '#8a5126',
+    '--tile-bg': 'linear-gradient(180deg,#f0be86,#c8823b)', '--tile-fg': '#432308', '--tile-edge': '#7c451b',
     '--tile-grain': 'repeating-linear-gradient(90deg,rgba(90,52,22,.0) 0 10px,rgba(90,52,22,.10) 10px 12px)',
-    '--panel': 'rgba(9,52,82,.40)', '--wall': '#5a3416', '--floor': '#fff2cf', '--frame': '#c98a4b',
+    '--panel': 'rgba(9,52,82,.42)', '--wall': '#5a3416', '--floor': '#fff2cf', '--frame': '#c98a4b',
   },
   super: {
-    '--tile-bg': 'linear-gradient(180deg,#9b88ff,#5b3ed8)', '--tile-fg': '#fff', '--tile-edge': '#33208f',
-    '--tile-grain': 'linear-gradient(135deg,rgba(255,255,255,.25),rgba(255,255,255,0) 45%)',
-    '--panel': 'rgba(14,10,60,.38)', '--wall': '#2a1a8a', '--floor': '#ece8ff', '--frame': '#6a3df0',
+    '--tile-bg': 'linear-gradient(180deg,#a695ff,#5b3ed8)', '--tile-fg': '#fff', '--tile-edge': '#311d8a',
+    '--tile-grain': 'linear-gradient(135deg,rgba(255,255,255,.28),rgba(255,255,255,0) 45%)',
+    '--panel': 'rgba(14,10,60,.42)', '--wall': '#2a1a8a', '--floor': '#ece8ff', '--frame': '#6a3df0',
+  },
+  pups: {
+    '--tile-bg': 'linear-gradient(180deg,#ff6b6b,#d90429)', '--tile-fg': '#fff', '--tile-edge': '#8d0801',
+    '--tile-grain': 'linear-gradient(135deg,rgba(255,255,255,.32),rgba(255,255,255,0) 50%)',
+    '--panel': 'rgba(7,45,82,.38)', '--wall': '#0d3b66', '--floor': '#fff8dc', '--frame': '#ef233c',
+  },
+  rescue: {
+    '--tile-bg': 'linear-gradient(180deg,#6ee7b7,#059669)', '--tile-fg': '#062c21', '--tile-edge': '#065f46',
+    '--tile-grain': 'linear-gradient(135deg,rgba(255,255,255,.35),rgba(255,255,255,0) 50%)',
+    '--panel': 'rgba(6,44,38,.44)', '--wall': '#115e59', '--floor': '#fef9c3', '--frame': '#d97706',
   },
 };
 

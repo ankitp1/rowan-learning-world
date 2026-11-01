@@ -30,10 +30,10 @@ export function HelperButton({ theme, level, max, onAsk }: { theme: Theme; level
   );
 }
 
-export function Bubble({ theme, text }: { theme: Theme; text: string }) {
+export function Bubble({ theme, text, mood = 'talking' }: { theme: Theme; text: string; mood?: 'idle' | 'talking' | 'cheer' }) {
   return (
-    <div className="bubble" role="status">
-      <HelperAvatar theme={theme} size={64} talking />
+    <div className={`bubble${mood === 'cheer' ? ' bubble-cheer' : ''}`} role="status">
+      <HelperAvatar theme={theme} size={68} talking mood={mood} />
       <p>{text}</p>
     </div>
   );
@@ -231,7 +231,7 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
 
   return (
     <div className="qcard">
-      <Bubble theme={theme} text={bubble || (placement ? 'Take your best guess. You can do it!' : `Take your time, ${profile.name}!`)} />
+      <Bubble theme={theme} mood={done ? 'cheer' : 'talking'} text={bubble || (placement ? 'Take your best guess. You can do it!' : `Take your time, ${profile.name}!`)} />
       <div className="prompt">
         <span>{prompt}</span>
         <button className="icon-btn" aria-label="Read the question aloud" onClick={() => void speak(fill(q.say ?? q.prompt, theme))}>🔊</button>
