@@ -12,6 +12,13 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "redirects": [
+      {
+        "source": "/tv.apk",
+        "destination": "https://github.com/ankitp1/rowan-learning-world/releases/download/v1.0.0-tv/rowan-learning-world-tv.apk",
+        "type": 302
+      }
+    ],
     "rewrites": [
       {
         "source": "**",
