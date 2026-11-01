@@ -5,13 +5,16 @@ Runs on phone, laptop and TV browsers from one codebase. Everything is stored on
 
 Created using Anthropic Claude. Keep this on internal versions until a human has reviewed and verified it.
 
-## Run it
+## Run & Deploy
+
+- **Live Hosted App:** https://rowan-learning-world-ap1.web.app
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173 (also on your LAN: use the "Network" URL on the TV/phone)
-npm test           # 58 tests: engine, generators, reports, and UI flows
+npm test           # 96 tests: engine, generators, reports, cross-device sync, and UI flows
 npm run build      # production build in dist/ (installable, works offline after first load)
+npm run deploy     # builds and deploys to Firebase Hosting + Firestore
 ```
 
 First run: create a player, then the **Treasure Hunt** placement sets his starting level for reading and math.

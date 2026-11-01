@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "deploy": "npm run build && npx -y firebase-tools@latest deploy --only hosting,firestore"
   },
   "dependencies": {
     "@fontsource-variable/fredoka": "^5.2.0",
