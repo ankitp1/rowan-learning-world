@@ -1,0 +1,116 @@
+import { useState } from 'react';
+import { frontier } from '../core/engine';
+import { patchProfile } from '../core/db';
+import { APPS } from '../core/registry';
+import { THEMES, themeById } from '../core/themes';
+import type { MiniApp, Profile, Subject, Theme } from '../core/types';
+import { HelperAvatar, IslandBase } from '../ui/Art';
+
+const TONE: Record<string, Record<string, string>> = {
+  pirate: { reading: '#f6d98a', math: '#ffb3a7', mystery: '#c3aef0', brain: '#9fe3b8', games: '#ffc27a' },
+  super: { reading: '#59f0ff', math: '#80ed99', mystery: '#ff7eb6', brain: '#b388ff', games: '#ffd23f' },
+};
+
+export type IslandKey = 'reading' | 'math' | 'mystery' | 'brain' | 'games';
+
+export const appsOnIsland = (key: IslandKey, profile: Profile): MiniApp[] =>
+  APPS.filter((a) => !profile.settings.disabledApps.includes(a.id)).filter((a) =>
+    key === 'mystery' || key === 'brain' ? a.place === key : !a.place && a.subject === (key as Subject));
+
+function StickerBook({ profile, theme, onClose }: { profile: Profile; theme: Theme; onClose: () => void }) {
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="card" onClick={(e) => e.stopPropagation()}>
+        <h2>📖 Sticker book</h2>
+        <div className="stickers">
+          {theme.stickers.map((s) => (
+            <span key={s} className={`sticker${profile.stickers.includes(s) ? ' got' : ''}`}>{profile.stickers.includes(s) ? s : '❔'}</span>
+          ))}
+        </div>
+        <p>{theme.stickers.filter((s) => profile.stickers.includes(s)).length} of {theme.stickers.length} found. Finish missions to open treasure chests!</p>
+        <button className="btn primary" data-autofocus onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
+}
+
+/** The map: one island per subject, plus the big "Start mission" button. */
+export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onGrownUps }: {
+  profile: Profile; theme: Theme;
+  onIsland: (k: IslandKey) => void; onMission: () => void; onSwitch: () => void; onGrownUps: () => void;
+}) {
+  const [book, setBook] = useState(false);
+  const allowed = THEMES.filter((t) => !profile.settings.allowedThemes.length || profile.settings.allowedThemes.includes(t.id));
+  const cycleTheme = () => {
+    const i = allowed.findIndex((t) => t.id === theme.id);
+    const nxt = allowed[(i + 1) % allowed.length];
+    if (nxt) patchProfile(profile.id, (p) => { p.themeId = nxt.id; });
+  };
+  const islands: { key: IslandKey; name: string; emoji: string }[] = [
+    { key: 'reading', name: theme.islands.reading, emoji: theme.islandEmoji.reading },
+    { key: 'math', name: theme.islands.math, emoji: theme.islandEmoji.math },
+    { key: 'mystery', name: theme.mystery.name, emoji: theme.mystery.emoji },
+    { key: 'brain', name: theme.brain.name, emoji: theme.brain.emoji },
+    { key: 'games', name: theme.islands.games, emoji: theme.islandEmoji.games },
+  ];
+  const shown = islands.filter((i) => appsOnIsland(i.key, profile).length);
+  void frontier; void themeById;
+  return (
+    <div className="screen hub">
+      <header className="hub-top">
+        <button className="chip-btn" onClick={onSwitch}>{profile.avatar} {profile.name}</button>
+        <span className="stars-count" aria-label={`${profile.stars} stars`}>⭐ {profile.stars}</span>
+        <button className="chip-btn" onClick={() => setBook(true)}>📖 Stickers</button>
+        {allowed.length > 1 && <button className="chip-btn" onClick={cycleTheme}>{theme.emoji} Change look</button>}
+        <button className="chip-btn lock" onClick={onGrownUps} aria-label="Grown-ups">🔒</button>
+      </header>
+      <h1 className="map-title">{theme.mapTitle.replace('{name}', profile.name)}</h1>
+      <div className="map">
+        {theme.decor.map((d, i) => <span key={i} className={`decor d${i}`} aria-hidden>{d}</span>)}
+        <div className="hub-helper">
+          <HelperAvatar theme={theme} size={110} talking />
+          <div className="bubble"><p>{theme.id === 'pirate' ? `Ahoy, Captain ${profile.name}! Ready for a mission?` : `Hi ${profile.name}! Ready for a mission?`}</p></div>
+        </div>
+        <button className="mission-btn" data-autofocus onClick={onMission}>
+          <span className="m-emoji">{theme.pieces[0]}</span>
+          <span>Start a mission!</span>
+        </button>
+        <div className="islands">
+          {shown.map((i) => (
+            <button key={i.key} className={`island ${i.key}`} onClick={() => onIsland(i.key)}>
+              <IslandBase themeId={theme.id} tone={TONE[theme.id]?.[i.key] ?? '#f6d98a'} />
+              <span className="i-emoji">{i.emoji}</span>
+              <span className="i-name">{i.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      {book && <StickerBook profile={profile} theme={theme} onClose={() => setBook(false)} />}
+    </div>
+  );
+}
+
+export function IslandMenu({ island, profile, theme, onPlay, onBack }: {
+  island: IslandKey; profile: Profile; theme: Theme; onPlay: (id: string) => void; onBack: () => void;
+}) {
+  const name = island === 'mystery' ? theme.mystery.name : island === 'brain' ? theme.brain.name : theme.islands[island];
+  const emoji = island === 'mystery' ? theme.mystery.emoji : island === 'brain' ? theme.brain.emoji : theme.islandEmoji[island];
+  const apps = appsOnIsland(island, profile);
+  return (
+    <div className="screen island-menu">
+      <header className="topbar">
+        <button className="back" onClick={onBack} aria-label="Back">⬅</button>
+        <h2>{emoji} {name}</h2>
+      </header>
+      <div className="app-cards">
+        {apps.map((a, i) => (
+          <button key={a.id} className="app-card" data-autofocus={i === 0 ? '' : undefined} onClick={() => onPlay(a.id)}>
+            <span className="a-icon">{a.icon}</span>
+            <b>{a.id === 'sneaky-thief' ? `Sneaky ${theme.thief.name[0].toUpperCase()}${theme.thief.name.slice(1)}` : a.title}</b>
+            <small>{a.blurb}</small>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

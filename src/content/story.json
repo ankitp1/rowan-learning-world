@@ -1,0 +1,49 @@
+{
+  "id": "missing-map",
+  "title": "The Missing Map",
+  "pages": [
+    { "art": "🗺️📦", "text": "The map is not in the box. It is gone!", "clue": null },
+    { "art": "🐶☀️", "text": "Pip the pup sat in the sun. Pip has a bun. Pip has no map.", "clue": "Pip has a bun, not the map." },
+    { "art": "🐱🎩", "text": "Ben the cat sat on a mat. Ben has a red hat. The map is not in the hat.", "clue": "The map is not in Ben's hat." },
+    { "art": "🦀🟤", "text": "Gus the crab is in the mud. Gus has a big grin. A bit of map is in his hand!", "clue": "A bit of map is in Gus's hand." },
+    { "art": "🎉🗺️", "text": "Gus had the map. He did not mean to take it. {name} got the map back and Gus got a hug.", "clue": null }
+  ],
+  "questions": [
+    {
+      "skill": "read.comp.recall",
+      "prompt": "Who sat in the sun?",
+      "answer": "pip",
+      "choices": [
+        { "id": "pip", "emoji": "🐶", "text": "Pip" },
+        { "id": "ben", "emoji": "🐱", "text": "Ben" },
+        { "id": "gus", "emoji": "🦀", "text": "Gus" }
+      ],
+      "nudge": "Look back at the picture with the sun.",
+      "explain": "Pip the pup sat in the sun."
+    },
+    {
+      "skill": "read.comp.sequence",
+      "prompt": "Who did we meet last?",
+      "answer": "gus",
+      "choices": [
+        { "id": "pip", "emoji": "🐶", "text": "Pip" },
+        { "id": "ben", "emoji": "🐱", "text": "Ben" },
+        { "id": "gus", "emoji": "🦀", "text": "Gus" }
+      ],
+      "nudge": "Think about the order of the pages.",
+      "explain": "We met Pip, then Ben, then Gus last."
+    },
+    {
+      "skill": "read.comp.infer",
+      "prompt": "Who has the map?",
+      "answer": "gus",
+      "choices": [
+        { "id": "pip", "emoji": "🐶", "text": "Pip" },
+        { "id": "ben", "emoji": "🐱", "text": "Ben" },
+        { "id": "gus", "emoji": "🦀", "text": "Gus" }
+      ],
+      "nudge": "Which clue says a bit of map was found?",
+      "explain": "A bit of map was in Gus's hand. That is the clue!"
+    }
+  ]
+}
