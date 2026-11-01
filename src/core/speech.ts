@@ -1,12 +1,25 @@
 /**
  * Voice + sound effects.
  *
- * Phonics sounds: browser TTS can't say a clean /k/ or /sh/, so each sound key
- * first looks for a recorded clip at public/audio/phonemes/<key>.mp3 (listed in
- * public/audio/phonemes/index.json) and only falls back to a TTS respelling.
- * Drop in recordings later and nothing else changes.
+ * Supports 3 speech backends in priority order:
+ * 1. Native Android TV / Chromecast TTS bridge (`window.AndroidTTS`)
+ * 2. Browser Web Speech API (`window.speechSynthesis`) when voices are available
+ * 3. HTML5 Audio cloud TTS stream fallback for WebViews without Web Speech API
  */
 import { SOUND_TEXT } from '../content/phonics';
+
+interface AndroidTTSBridge {
+  isReady?: () => boolean;
+  speak: (text: string, rate: number, pitch: number, flush: boolean) => void;
+  stop: () => void;
+}
+
+declare global {
+  interface Window {
+    AndroidTTS?: AndroidTTSBridge;
+    webkitAudioContext?: typeof AudioContext;
+  }
+}
 
 let rate = 0.9;
 export const setSpeechRate = (r: number) => { rate = r; };
@@ -14,6 +27,7 @@ export const setSpeechRate = (r: number) => { rate = r; };
 const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
 let recorded = new Set<string>();
 let loaded = false;
+let activeAudio: HTMLAudioElement | null = null;
 
 export function loadRecordedSounds() {
   if (loaded) return;
@@ -30,26 +44,77 @@ function pickVoice(): SpeechSynthesisVoice | undefined {
     ?? voices.find((v) => /^en/i.test(v.lang));
 }
 
-export function stopSpeaking() { synth?.cancel(); }
+export function stopSpeaking() {
+  try { window.AndroidTTS?.stop(); } catch { /* ignore */ }
+  try { synth?.cancel(); } catch { /* ignore */ }
+  if (activeAudio) {
+    try { activeAudio.pause(); activeAudio = null; } catch { /* ignore */ }
+  }
+}
 
-/** Speak text. Resolves when finished (or immediately if TTS is unavailable). */
+/** Speak text. Resolves when finished (or after estimated duration on TV bridge). */
 export function speak(text: string, opts: { rate?: number; pitch?: number; interrupt?: boolean } = {}): Promise<void> {
   return new Promise((resolve) => {
-    if (!synth) return resolve();
-    if (opts.interrupt !== false) synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = (opts.rate ?? 1) * rate;
-    u.pitch = opts.pitch ?? 1.1;
-    const v = pickVoice();
-    if (v) u.voice = v;
-    // Browsers sometimes never fire onend (dropped utterance after cancel(), voices not ready,
-    // autoplay rules). Never let the game wait on that: fall back to an estimated duration.
-    let finished = false;
-    const done = () => { if (!finished) { finished = true; clearTimeout(guard); resolve(); } };
-    const guard = setTimeout(done, Math.min(8000, 700 + (text.length * 120) / (u.rate || 1)));
-    u.onend = done;
-    u.onerror = done;
-    synth.speak(u);
+    const clean = text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]/g, '').trim();
+    if (!clean) return resolve();
+
+    const finalRate = (opts.rate ?? 1) * rate;
+    const finalPitch = opts.pitch ?? 1.1;
+    const estMs = Math.min(7500, 550 + (clean.length * 95) / (finalRate || 1));
+
+    // 1. Native Android TV / Chromecast TTS bridge
+    if (typeof window !== 'undefined' && window.AndroidTTS && (!window.AndroidTTS.isReady || window.AndroidTTS.isReady())) {
+      try {
+        window.AndroidTTS.speak(clean, finalRate, finalPitch, opts.interrupt !== false);
+        setTimeout(resolve, estMs);
+        return;
+      } catch {
+        // Fall through if native bridge throws
+      }
+    }
+
+    // 2. Standard Web Speech API (if supported and not on Android WebView stub)
+    const isAndroidWebView = typeof navigator !== 'undefined' && /Android|CrKey|RowanAndroidTV/i.test(navigator.userAgent);
+    if (synth && (!isAndroidWebView || (synth.getVoices()?.length ?? 0) > 0)) {
+      if (opts.interrupt !== false) synth.cancel();
+      const u = new SpeechSynthesisUtterance(clean);
+      u.rate = finalRate;
+      u.pitch = finalPitch;
+      const v = pickVoice();
+      if (v) u.voice = v;
+      let finished = false;
+      const done = () => { if (!finished) { finished = true; clearTimeout(guard); resolve(); } };
+      const guard = setTimeout(done, estMs + 300);
+      u.onend = done;
+      u.onerror = done;
+      synth.speak(u);
+      return;
+    }
+
+    // 3. HTML5 Audio TTS fallback for WebViews where Web Speech API is missing
+    if (typeof Audio !== 'undefined') {
+      try {
+        if (opts.interrupt !== false && activeAudio) {
+          activeAudio.pause();
+          activeAudio = null;
+        }
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${encodeURIComponent(clean.slice(0, 180))}`;
+        const a = new Audio(url);
+        a.playbackRate = Math.max(0.65, Math.min(1.5, finalRate));
+        activeAudio = a;
+        let finished = false;
+        const done = () => { if (!finished) { finished = true; clearTimeout(guard); resolve(); } };
+        const guard = setTimeout(done, estMs + 500);
+        a.onended = done;
+        a.onerror = done;
+        a.play().catch(done);
+        return;
+      } catch {
+        return resolve();
+      }
+    }
+
+    resolve();
   });
 }
 
@@ -64,7 +129,7 @@ function playClip(key: string): Promise<boolean> {
 
 /** Speak one phonics sound by key ("sh", "a", "a_e"...). */
 export async function speakSound(key: string, interrupt = true) {
-  if (interrupt) synth?.cancel();
+  if (interrupt) stopSpeaking();
   if (recorded.has(key) && (await playClip(key))) return;
   await speak(SOUND_TEXT[key] ?? key, { rate: 0.75, interrupt: false });
 }
@@ -79,7 +144,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export function soundOut(sounds: string[], word: string, onStep?: (i: number) => void, gap = 450) {
   let cancelled = false;
   (async () => {
-    synth?.cancel();
+    stopSpeaking();
     for (let i = 0; i < sounds.length; i++) {
       if (cancelled) return;
       onStep?.(i);
@@ -91,15 +156,20 @@ export function soundOut(sounds: string[], word: string, onStep?: (i: number) =>
     await speak(word, { rate: 0.7, interrupt: false });
     if (!cancelled) onStep?.(-2);
   })();
-  return () => { cancelled = true; synth?.cancel(); };
+  return () => { cancelled = true; stopSpeaking(); };
 }
 
 /* ---------------- sound effects (all gentle, never a harsh buzzer) ---------------- */
 
 let ctx: AudioContext | undefined;
-function tone(freq: number, start: number, dur: number, type: OscillatorType = 'sine', vol = 0.08) {
+function tone(freq: number, start: number, dur: number, type: OscillatorType = 'sine', vol = 0.16) {
   try {
-    ctx ??= new AudioContext();
+    const Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) return;
+    ctx ??= new Ctor();
+    if (ctx.state === 'suspended') {
+      void ctx.resume();
+    }
     const o = ctx.createOscillator();
     const g = ctx.createGain();
     o.type = type;
@@ -108,7 +178,8 @@ function tone(freq: number, start: number, dur: number, type: OscillatorType = '
     g.gain.setValueAtTime(0, t0);
     g.gain.linearRampToValueAtTime(vol, t0 + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g).connect(ctx.destination);
+    o.connect(g);
+    g.connect(ctx.destination);
     o.start(t0);
     o.stop(t0 + dur + 0.05);
   } catch { /* audio not available */ }
@@ -116,9 +187,9 @@ function tone(freq: number, start: number, dur: number, type: OscillatorType = '
 
 export const sfx = {
   tap: () => tone(660, 0, 0.08),
-  note: (freq: number, dur = 0.35) => tone(freq, 0, dur, 'triangle', 0.14),
+  note: (freq: number, dur = 0.35) => tone(freq, 0, dur, 'triangle', 0.22),
   good: () => { tone(523, 0, 0.12); tone(659, 0.1, 0.12); tone(784, 0.2, 0.2); },
-  soft: () => tone(330, 0, 0.18, 'sine', 0.05),
+  soft: () => tone(330, 0, 0.18, 'sine', 0.1),
   star: () => { tone(880, 0, 0.1, 'triangle'); tone(1175, 0.09, 0.18, 'triangle'); },
   chest: () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.2, 'triangle')); },
 };
