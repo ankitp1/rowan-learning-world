@@ -1,0 +1,213 @@
+/**
+ * Loaded ONLY when `isLegacyDevice()` detects an older browser like iPad iOS 9.3.5 (Safari 9).
+ * Modern devices never load this stylesheet.
+ *
+ * Provides Flexbox fallbacks for CSS Grid, explicit top/right/bottom/left for `inset: 0`,
+ * explicit pixel sizes for `clamp()` / `aspect-ratio` / `100dvh`, and margins for flex `gap`.
+ */
+
+html.legacy-device .app {
+  min-height: 100vh;
+  background: #0e4d64;
+  background: -webkit-linear-gradient(290deg, #0e4d64, #1b8aa6);
+  background: linear-gradient(160deg, #0e4d64, #1b8aa6);
+}
+html.legacy-device .app.light {
+  background: #f3f1ea;
+  color: #10323f;
+}
+html.legacy-device .scenery,
+html.legacy-device .scenery::after,
+html.legacy-device .overlay,
+html.legacy-device .confetti,
+html.legacy-device .mc-back,
+html.legacy-device .mc-front,
+html.legacy-device .coin.gone::after {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+html.legacy-device .hold-btn .bar {
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+html.legacy-device .screen {
+  min-height: 100vh;
+}
+html.legacy-device h1 { font-size: 40px; }
+html.legacy-device h2 { font-size: 26px; }
+html.legacy-device .big-emoji { font-size: 100px; }
+html.legacy-device .map-title { font-size: 36px; }
+html.legacy-device .mission-btn { font-size: 32px; background: #ffb703; }
+html.legacy-device .btn { background: #ffffff; color: #10323f; margin: 6px; }
+html.legacy-device .btn.primary { background: #ffb703; color: #1d1500; }
+html.legacy-device .profile-btn { background: #fff8e7; color: #10323f; margin: 10px; }
+html.legacy-device .card { background: #fff8e7; color: #10323f; }
+html.legacy-device .choice { background: #fff8e7; color: #10323f; margin: 8px; }
+html.legacy-device .helper-btn { background: #ffb703; color: #1d1500; }
+html.legacy-device .tile { background: #d49452; color: #4a2a0c; margin: 6px; }
+html.legacy-device .slot.filled { background: #d49452; color: #4a2a0c; }
+html.legacy-device .slot { margin: 6px; }
+html.legacy-device .word { margin: 4px 8px; }
+
+/* Flexbox fallbacks for CSS Grid on Safari 9 */
+html.legacy-device .islands {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+html.legacy-device .island {
+  width: 180px;
+  margin: 8px;
+}
+html.legacy-device .i-name {
+  background: #fff8e7;
+  color: #10323f;
+}
+html.legacy-device .app-cards {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+html.legacy-device .app-card {
+  width: 260px;
+  margin: 10px;
+  background: #fff8e7;
+  color: #10323f;
+}
+html.legacy-device .stickers {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+html.legacy-device .sticker {
+  margin: 6px;
+}
+html.legacy-device .coins {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  max-width: 320px;
+  font-size: 44px;
+}
+html.legacy-device .coin {
+  width: 56px;
+  margin: 4px;
+}
+html.legacy-device .tenframe {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  width: 360px;
+}
+html.legacy-device .tenframe .cell {
+  width: 64px;
+  margin: 3px;
+}
+html.legacy-device .ttt-grid {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  width: 360px;
+  height: 360px;
+}
+html.legacy-device .ttt-cell {
+  width: 104px;
+  height: 104px;
+  margin: 4px;
+  font-size: 64px;
+  background: #fff8e7;
+}
+html.legacy-device .keypad {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  width: 264px;
+}
+html.legacy-device .keyval {
+  width: 100%;
+  margin-bottom: 8px;
+}
+html.legacy-device .keypad button {
+  width: 78px;
+  margin: 4px;
+  background: #fff;
+}
+html.legacy-device .keypad .ok {
+  background: #ffb703;
+}
+html.legacy-device .mgrid {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  -webkit-justify-content: center;
+  justify-content: center;
+  max-width: 680px;
+}
+html.legacy-device .mcard {
+  width: 110px;
+  height: 136px;
+  margin: 6px;
+}
+html.legacy-device .echo-pads {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  -webkit-justify-content: center;
+  justify-content: center;
+  width: 440px;
+}
+html.legacy-device .echo-pad {
+  width: 180px;
+  height: 180px;
+  margin: 8px;
+  font-size: 48px;
+}
+html.legacy-device .maze-svg {
+  width: 420px;
+  height: 420px;
+}
+html.legacy-device .dpad {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  width: 252px;
+}
+html.legacy-device .dpad button {
+  width: 78px;
+  height: 78px;
+  margin: 3px;
+}
+html.legacy-device .mitem {
+  width: 82px;
+  height: 82px;
+  font-size: 46px;
+  margin: 6px;
+  background: #fff8e7;
+}
+html.legacy-device .plank {
+  width: 44px;
+  margin: 2px;
+}
+html.legacy-device .hpeg {
+  height: 320px;
+  margin: 0 8px;
+}

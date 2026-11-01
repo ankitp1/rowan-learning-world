@@ -30,6 +30,7 @@ export default function Gate({ onPass, onCancel }: { onPass: () => void; onCance
   const sum = useRef({ a: 6 + Math.floor(Math.random() * 4), b: 6 + Math.floor(Math.random() * 4) });
   const raf = useRef(0);
   const start = useRef(0);
+  const remotePresses = useRef<number[]>([]);
 
   const stopHold = () => { cancelAnimationFrame(raf.current); start.current = 0; setProg(0); };
   const startHold = () => {
@@ -42,6 +43,17 @@ export default function Gate({ onPass, onCancel }: { onPass: () => void; onCance
       raf.current = requestAnimationFrame(tick);
     };
     raf.current = requestAnimationFrame(tick);
+  };
+  const onRemotePress = () => {
+    const now = performance.now();
+    remotePresses.current = [...remotePresses.current.filter((t) => now - t < 2500), now];
+    if (remotePresses.current.length >= 3) {
+      stopHold();
+      setStep('math');
+      setVal('');
+    } else {
+      setProg(remotePresses.current.length / 3);
+    }
   };
   useEffect(() => () => cancelAnimationFrame(raf.current), []);
 
@@ -78,8 +90,16 @@ export default function Gate({ onPass, onCancel }: { onPass: () => void; onCance
             <button
               className="hold-btn" data-autofocus
               onPointerDown={startHold} onPointerUp={stopHold} onPointerLeave={stopHold} onPointerCancel={stopHold}
-              onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); startHold(); } }}
-              onKeyUp={(e) => { if (e.key === 'Enter' || e.key === ' ') stopHold(); }}
+              onTouchStart={startHold} onTouchEnd={stopHold} onTouchCancel={stopHold}
+              onMouseDown={startHold} onMouseUp={stopHold} onMouseLeave={stopHold}
+              onKeyDown={(e) => {
+                if ((e.key === 'Enter' || e.key === ' ' || e.key === 'Select' || e.keyCode === 23) && !e.repeat) {
+                  e.preventDefault();
+                  onRemotePress();
+                  startHold();
+                }
+              }}
+              onKeyUp={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Select' || e.keyCode === 23) stopHold(); }}
             >
               <span className="bar" style={{ width: `${prog * 100}%` }} />
               <span className="lbl">Hold</span>

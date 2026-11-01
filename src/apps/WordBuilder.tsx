@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { diagnoseWord } from '../content/generators';
+import { focusFirst } from '../core/nav';
 import { sfx, soundOut, speak, speakSound, stopSpeaking } from '../core/speech';
 import type { MiniAppProps, Question } from '../core/types';
 import { Bubble, HelperButton, MAX_HINTS } from '../ui/QuestionCard';
@@ -53,8 +54,9 @@ function Board({ r, props }: { r: RoundApi; props: MiniAppProps }) {
 
   useEffect(() => {
     alive.current = true; // StrictMode runs cleanup once in dev; re-arm
+    const focusId = setTimeout(focusFirst, 60);
     const id = setTimeout(() => void speak(`Build the word. It looks like this.`), 300);
-    return () => { clearTimeout(id); alive.current = false; cancel.current(); stopSpeaking(); };
+    return () => { clearTimeout(focusId); clearTimeout(id); alive.current = false; cancel.current(); stopSpeaking(); };
   }, []);
 
   useEffect(() => {
@@ -96,6 +98,7 @@ function Board({ r, props }: { r: RoundApi; props: MiniAppProps }) {
       const key = q.sounds?.[slot];
       if (key) void speakSound(key);
       if (next.length === tiles.length) void complete(false, mistakes, firstWrong);
+      else setTimeout(() => document.querySelector<HTMLElement>('.tray .tile:not(:disabled)')?.focus(), 40);
     } else {
       sfx.soft();
       setMistakes((m) => m + 1);
@@ -148,11 +151,12 @@ function Board({ r, props }: { r: RoundApi; props: MiniAppProps }) {
     if (alive.current) await complete(true, mistakes, firstWrong);
   }
 
-  /* ---- drag with pointer events; a short press counts as a tap ---- */
+  /* ---- drag with pointer events; a short press counts as a tap (with fallback for iOS 9 touch/click) ---- */
   const startRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const pointerHandledAt = useRef(0);
   const onDown = (item: Item) => (e: React.PointerEvent) => {
     if (busy) return;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
     startRef.current = { x: e.clientX, y: e.clientY, moved: false };
     setDrag({ item, x: e.clientX, y: e.clientY });
   };
@@ -167,6 +171,7 @@ function Board({ r, props }: { r: RoundApi; props: MiniAppProps }) {
     startRef.current = null;
     setDrag(null);
     if (!s) return;
+    pointerHandledAt.current = Date.now();
     if (!s.moved) { void speakSound(item.t); tryPlace(item); return; }
     const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-chest]');
     if (over) tryPlace(item);
@@ -187,17 +192,18 @@ function Board({ r, props }: { r: RoundApi; props: MiniAppProps }) {
         </div>
       </div>
       <div className="tray">
-        {tray.map((it) => (
+        {tray.map((it, idx) => (
           <button
             key={it.id}
+            data-autofocus={idx === 0 ? '' : undefined}
             className={`tile big${used.includes(it.id) ? ' used' : ''}${hidden.includes(it.id) ? ' hidden' : ''}${pulse ? ' pulse' : ''}${glow === it.id ? ' glow' : ''}${shake === it.id ? ' shake' : ''}`}
             disabled={used.includes(it.id) || hidden.includes(it.id)}
             onPointerDown={onDown(it)}
             onPointerMove={onMove}
             onPointerUp={onUp(it)}
             onPointerCancel={() => { startRef.current = null; setDrag(null); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void speakSound(it.t); tryPlace(it); } }}
-            onClick={(e) => { if (e.detail === 0) { void speakSound(it.t); tryPlace(it); } }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pointerHandledAt.current = Date.now(); void speakSound(it.t); tryPlace(it); } }}
+            onClick={() => { if (Date.now() - pointerHandledAt.current > 350) { void speakSound(it.t); tryPlace(it); } }}
             aria-label={`letter ${it.t}`}
           >
             {it.t}

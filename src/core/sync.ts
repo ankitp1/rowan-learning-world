@@ -3,6 +3,7 @@ import { initializeApp, getApps } from 'firebase/app';
 import { doc, getDoc, getFirestore, onSnapshot, setDoc, type Firestore, type Unsubscribe } from 'firebase/firestore';
 import { applyMergedDB, getDB, getDeviceId, onLocalMutation, todayKey, uid, type DB } from './db';
 import { DAY, applyAttempt, blankState } from './engine';
+import { isLegacyDevice } from './legacyDevice';
 import type { Attempt, Profile, SkillState, Subject } from './types';
 
 export const FIREBASE_CONFIG = {
@@ -244,7 +245,46 @@ const statusListeners = new Set<() => void>();
 let firestoreInstance: Firestore | null = null;
 let unsubscribeSnapshot: Unsubscribe | null = null;
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
+let legacyPollTimer: ReturnType<typeof setInterval> | null = null;
 let lastPushedJson = '';
+
+function restDocUrl(code: string): string {
+  return `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/families/${encodeURIComponent(code)}?key=${FIREBASE_CONFIG.apiKey}`;
+}
+
+function xhrRequest(method: 'GET' | 'PATCH', url: string, body?: string): Promise<{ status: number; text: string }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url, true);
+    if (body) xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText });
+    xhr.onerror = () => reject(new Error('Network request failed'));
+    xhr.send(body ?? null);
+  });
+}
+
+async function restPush(code: string, serialized: string): Promise<void> {
+  const payload = JSON.stringify({
+    fields: {
+      db: { stringValue: serialized },
+      updatedAt: { integerValue: String(Date.now()) },
+      updatedBy: { stringValue: getDeviceId() },
+      version: { integerValue: '1' },
+    },
+  });
+  const res = await xhrRequest('PATCH', restDocUrl(code), payload);
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+}
+
+async function restPull(code: string): Promise<string | null> {
+  const res = await xhrRequest('GET', restDocUrl(code));
+  if (res.status === 404) return null;
+  if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
+  const parsed = JSON.parse(res.text);
+  return parsed?.fields?.db?.stringValue ?? null;
+}
 
 function setStatus(patch: Partial<SyncStatus>) {
   status = { ...status, ...patch };
@@ -295,26 +335,36 @@ function getFirestoreDB(): Firestore | null {
 }
 
 export async function pushNow(): Promise<void> {
-  const fdb = getFirestoreDB();
   const code = status.code;
-  if (!fdb || code.length < 8) return;
+  if (code.length < 8) return;
   if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
   const current = getDB();
   const serialized = JSON.stringify(current);
   lastPushedJson = serialized;
   setStatus({ state: 'syncing', error: undefined });
   try {
-    const ref = doc(fdb, 'families', code);
-    await setDoc(ref, {
-      db: serialized,
-      updatedAt: Date.now(),
-      updatedBy: getDeviceId(),
-      version: 1,
-    });
+    const fdb = isLegacyDevice() ? null : getFirestoreDB();
+    if (fdb) {
+      const ref = doc(fdb, 'families', code);
+      await setDoc(ref, {
+        db: serialized,
+        updatedAt: Date.now(),
+        updatedBy: getDeviceId(),
+        version: 1,
+      });
+    } else {
+      await restPush(code, serialized);
+    }
     setStatus({ state: 'synced', lastSyncedAt: Date.now(), error: undefined });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Sync failed';
-    setStatus({ state: navigator.onLine ? 'error' : 'offline', error: msg });
+    // Fallback to REST if SDK write failed on an older WebView/browser
+    try {
+      await restPush(code, serialized);
+      setStatus({ state: 'synced', lastSyncedAt: Date.now(), error: undefined });
+    } catch (e2) {
+      const msg = e2 instanceof Error ? e2.message : e instanceof Error ? e.message : 'Sync failed';
+      setStatus({ state: navigator.onLine ? 'error' : 'offline', error: msg });
+    }
   }
 }
 
@@ -324,29 +374,34 @@ function schedulePush(delayMs = 600) {
 }
 
 export async function pullAndMergeNow(): Promise<void> {
-  const fdb = getFirestoreDB();
   const code = status.code;
-  if (!fdb || code.length < 8) return;
+  if (code.length < 8) return;
   setStatus({ state: 'syncing', error: undefined });
   try {
-    const ref = doc(fdb, 'families', code);
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      const data = snap.data();
-      if (typeof data?.db === 'string') {
-        const remote = JSON.parse(data.db) as DB;
-        const local = getDB();
-        const merged = mergeDB(local, remote);
-        const mergedJson = JSON.stringify(merged);
-        applyMergedDB(merged);
-        if (mergedJson !== data.db) {
-          await pushNow();
-        } else {
-          lastPushedJson = mergedJson;
-          setStatus({ state: 'synced', lastSyncedAt: Date.now(), error: undefined });
-        }
-        return;
+    let remoteDbStr: string | null = null;
+    const fdb = isLegacyDevice() ? null : getFirestoreDB();
+    if (fdb) {
+      const ref = doc(fdb, 'families', code);
+      const snap = await getDoc(ref);
+      if (snap.exists() && typeof snap.data()?.db === 'string') {
+        remoteDbStr = snap.data().db as string;
       }
+    } else {
+      remoteDbStr = await restPull(code);
+    }
+    if (remoteDbStr) {
+      const remote = JSON.parse(remoteDbStr) as DB;
+      const local = getDB();
+      const merged = mergeDB(local, remote);
+      const mergedJson = JSON.stringify(merged);
+      applyMergedDB(merged);
+      if (mergedJson !== remoteDbStr) {
+        await pushNow();
+      } else {
+        lastPushedJson = mergedJson;
+        setStatus({ state: 'synced', lastSyncedAt: Date.now(), error: undefined });
+      }
+      return;
     }
     // No remote doc yet: push our local state to initialize it
     await pushNow();
@@ -373,8 +428,20 @@ export function generateNewSyncCode(): string {
 
 function connectSync(code = status.code) {
   if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+  if (legacyPollTimer) { clearInterval(legacyPollTimer); legacyPollTimer = null; }
+  if (code.length < 8) return;
+
+  // On legacy devices (e.g. iOS 9.3.5 Safari), use lightweight XHR REST sync + periodic polling
+  if (isLegacyDevice()) {
+    void pullAndMergeNow();
+    legacyPollTimer = setInterval(() => {
+      if (!document.hidden && navigator.onLine) void pullAndMergeNow();
+    }, 10_000);
+    return;
+  }
+
   const fdb = getFirestoreDB();
-  if (!fdb || code.length < 8) return;
+  if (!fdb) return;
 
   const ref = doc(fdb, 'families', code);
   setStatus({ code, state: 'syncing', error: undefined });

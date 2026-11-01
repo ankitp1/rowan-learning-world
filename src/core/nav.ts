@@ -47,16 +47,29 @@ function move(dir: 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight') {
 
 export function useSpatialNav(onBack: () => void) {
   useEffect(() => {
+    // Expose a global back hook so the Android TV / Chromecast APK hardware Back button can invoke it directly
+    (window as unknown as { __rlwBack?: () => void }).__rlwBack = onBack;
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
       const t = e.target as HTMLElement;
       const typing = t?.tagName === 'INPUT' && (t as HTMLInputElement).type !== 'range' && (t as HTMLInputElement).type !== 'checkbox';
-      if (e.key === 'Escape' || e.key === 'BrowserBack' || (e.key === 'Backspace' && !typing)) {
+      if (
+        e.key === 'Escape' ||
+        e.key === 'BrowserBack' ||
+        e.key === 'GoBack' ||
+        e.keyCode === 4 || // Android KEYCODE_BACK in older WebViews
+        (e.key === 'Backspace' && !typing)
+      ) {
         e.preventDefault(); onBack(); return;
       }
       if (document.body.dataset.navLock) return;
       if (typing && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return;
-      if (e.key.startsWith('Arrow')) { e.preventDefault(); move(e.key as 'ArrowUp'); }
+      if (e.key.startsWith('Arrow')) { e.preventDefault(); move(e.key as 'ArrowUp'); return; }
+      // Android TV / Chromecast remote DPAD_CENTER sometimes sends keyCode 23 or 'Accept'/'Select'
+      if ((e.key === 'Select' || e.key === 'Accept' || e.keyCode === 23) && document.activeElement instanceof HTMLElement) {
+        e.preventDefault();
+        document.activeElement.click();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

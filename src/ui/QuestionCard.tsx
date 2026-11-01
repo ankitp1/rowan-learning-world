@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { fill } from '../content/generators';
+import { focusFirst } from '../core/nav';
 import { sfx, soundOut, speak, speakSound, stopSpeaking } from '../core/speech';
 import type { Choice, HintMode, Profile, Question, Theme } from '../core/types';
 import { HelperAvatar } from './Art';
@@ -95,13 +96,14 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
     }
   };
 
-  // Speak the question once it appears.
+  // Speak the question once it appears, and put D-pad focus on the first answer choice.
   useEffect(() => {
+    const focusId = setTimeout(focusFirst, 60);
     const id = setTimeout(() => {
       if (variant === 'plank') playBlend();
       else if (!q.silent) void speak(fill(q.say ?? q.prompt, theme));
     }, 350);
-    return () => clearTimeout(id);
+    return () => { clearTimeout(focusId); clearTimeout(id); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -236,12 +238,12 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
       </div>
       <div className="visual">{visual}</div>
       <div className={`choices n${q.choices.length}${variant === 'ropes' ? ' ropes' : ''}${q.kind === 'follow' ? ' deck' : ''}`}>
-        {q.choices.map((c) => {
+        {q.choices.map((c, idx) => {
           const isGone = gone.includes(c.id);
           const glow = reveal && c.id === q.answer;
           const cls = `choice${isGone ? ' gone' : ''}${glow ? ' glow' : ''}${done === c.id && c.id === q.answer ? ' right' : ''}`;
           return (
-            <button key={c.id} className={cls} disabled={isGone} onClick={() => pick(c)} aria-label={c.text ?? c.id}>
+            <button key={c.id} className={cls} data-autofocus={idx === 0 ? '' : undefined} disabled={isGone} onClick={() => pick(c)} aria-label={c.text ?? c.id}>
               {c.shape && <ShapeSvg shape={c.shape} />}
               {c.emoji && <span className="ce">{c.emoji}</span>}
               {c.text && !(q.kind === 'word') && <span className="ct">{c.text}</span>}

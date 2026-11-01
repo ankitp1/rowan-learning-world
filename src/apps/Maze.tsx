@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { setGameLevel } from '../core/db';
 import { awardStars } from '../core/engine';
+import { focusFirst } from '../core/nav';
 import { sfx, speak, stopSpeaking } from '../core/speech';
 import type { MiniAppProps } from '../core/types';
 import { Confetti } from '../ui/Art';
@@ -80,6 +81,11 @@ export default function Maze({ profile, theme, onExit, onComplete }: MiniAppProp
   }, [arrive]);
 
   useEffect(() => {
+    if (won) {
+      delete document.body.dataset.navLock;
+      const id = setTimeout(focusFirst, 60);
+      return () => clearTimeout(id);
+    }
     document.body.dataset.navLock = '1';
     const onKey = (e: KeyboardEvent) => {
       const map: Record<string, Dir> = { ArrowUp: 'N', ArrowRight: 'E', ArrowDown: 'S', ArrowLeft: 'W', w: 'N', d: 'E', s: 'S', a: 'W' };
@@ -88,7 +94,7 @@ export default function Maze({ profile, theme, onExit, onComplete }: MiniAppProp
     };
     window.addEventListener('keydown', onKey);
     return () => { delete document.body.dataset.navLock; window.removeEventListener('keydown', onKey); stopSpeaking(); };
-  }, [move]);
+  }, [move, won]);
 
   const onPointerDown = (e: React.PointerEvent) => { swipe.current = { x: e.clientX, y: e.clientY }; };
   const onPointerUp = (e: React.PointerEvent) => {
@@ -97,6 +103,20 @@ export default function Maze({ profile, theme, onExit, onComplete }: MiniAppProp
     if (!s) return;
     const dx = e.clientX - s.x;
     const dy = e.clientY - s.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+    void move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'E' : 'W') : (dy > 0 ? 'S' : 'N'));
+  };
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    if (t) swipe.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const s = swipe.current;
+    swipe.current = null;
+    const t = e.changedTouches[0];
+    if (!s || !t) return;
+    const dx = t.clientX - s.x;
+    const dy = t.clientY - s.y;
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
     void move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'E' : 'W') : (dy > 0 ? 'S' : 'N'));
   };
@@ -128,7 +148,9 @@ export default function Maze({ profile, theme, onExit, onComplete }: MiniAppProp
       <div className="maze-wrap">
         <svg
           className="maze-svg" viewBox={`-0.25 -0.25 ${size + 0.5} ${size + 0.5}`}
-          onPointerDown={onPointerDown} onPointerUp={onPointerUp} role="application" aria-label="maze, use the arrow keys"
+          onPointerDown={onPointerDown} onPointerUp={onPointerUp}
+          onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
+          role="application" aria-label="maze, use the arrow keys"
         >
           <rect x="-0.2" y="-0.2" width={size + 0.4} height={size + 0.4} rx="0.5" className="maze-frame" />
           <rect x="0" y="0" width={size} height={size} className="maze-floor" />

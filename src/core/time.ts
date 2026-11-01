@@ -12,9 +12,13 @@ export function inBedtime(b: { from: string; to: string } | null | undefined, no
 /** Salted hash for the grown-up PIN. Uses SHA-256 where available (HTTPS/localhost), else a simple fallback. */
 export async function hashPin(pin: string, salt: string): Promise<string> {
   const text = `${salt}:${pin}`;
-  if (globalThis.crypto?.subtle) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  if (globalThis.crypto?.subtle && typeof TextEncoder !== 'undefined') {
+    try {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+      return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch {
+      // Fall through to deterministic fallback on older browsers
+    }
   }
   let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
   for (let i = 0; i < text.length; i++) {

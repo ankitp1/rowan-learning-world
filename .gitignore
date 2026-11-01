@@ -4,3 +4,7 @@ dist
 *-debug.log
 *.local
 .DS_Store
+android-tv/.gradle
+android-tv/build
+android-tv/app/build
+android-tv/app/src/main/assets
