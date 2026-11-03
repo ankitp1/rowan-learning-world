@@ -167,10 +167,140 @@ function RescueSky() {
   );
 }
 
+function SpaceRangerSky() {
+  const { stars, meteors } = useMemo(() => {
+    let s = 19;
+    const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    const stars = Array.from({ length: 90 }, () => ({ x: r() * 1600, y: r() * 560, r: 1.2 + r() * 2.8, d: r() * 3.5 }));
+    const meteors = [
+      { x1: 200, y1: 80, x2: 360, y2: 150 },
+      { x1: 1100, y1: 120, x2: 1280, y2: 210 },
+    ];
+    return { stars, meteors };
+  }, []);
+  return (
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="srsky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#040817" /><stop offset=".5" stopColor="#0f172a" /><stop offset="1" stopColor="#311042" />
+        </linearGradient>
+        <radialGradient id="srnebula" cx="70%" cy="30%" r="50%">
+          <stop offset="0" stopColor="#a855f7" stopOpacity=".45" />
+          <stop offset=".5" stopColor="#06b6d4" stopOpacity=".2" />
+          <stop offset="1" stopColor="#040817" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="srplanet">
+          <stop offset="0" stopColor="#38ef7d" /><stop offset=".7" stopColor="#059669" /><stop offset="1" stopColor="#064e3b" />
+        </radialGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#srsky)" />
+      <rect width="1600" height="900" fill="url(#srnebula)" />
+      {stars.map((st, i) => (
+        <circle key={i} className="star" style={{ animationDelay: `${st.d}s` }} cx={st.x} cy={st.y} r={st.r} fill="#fff" />
+      ))}
+      {meteors.map((m, i) => (
+        <line key={i} className="shoot" x1={m.x1} y1={m.y1} x2={m.x2} y2={m.y2} stroke="#38ef7d" strokeWidth="2.5" strokeLinecap="round" />
+      ))}
+      {/* Giant Ringed Planet */}
+      <g transform="translate(1300 240)">
+        <ellipse cx="0" cy="0" rx="90" ry="24" fill="none" stroke="#a7f3d0" strokeWidth="12" opacity=".4" transform="rotate(-22)" />
+        <circle cx="0" cy="0" r="60" fill="url(#srplanet)" />
+        <ellipse cx="0" cy="0" rx="90" ry="24" fill="none" stroke="#6ee7b7" strokeWidth="6" opacity=".8" transform="rotate(-22)" />
+      </g>
+      {/* Distant Star Command Space Station */}
+      <g transform="translate(260 200) scale(0.85)" opacity=".85">
+        <circle cx="0" cy="0" r="28" fill="#1e293b" stroke="#38ef7d" strokeWidth="3" />
+        <line x1="-70" y1="0" x2="70" y2="0" stroke="#38ef7d" strokeWidth="4" />
+        <rect x="-65" y="-18" width="30" height="36" rx="4" fill="#0284c7" stroke="#38ef7d" strokeWidth="2" />
+        <rect x="35" y="-18" width="30" height="36" rx="4" fill="#0284c7" stroke="#38ef7d" strokeWidth="2" />
+        <circle cx="0" cy="0" r="10" fill="#38ef7d" />
+      </g>
+      {/* Cosmic horizon / Launch platform */}
+      <path d="M-50 640 L300 580 L800 620 L1300 570 L1650 630 V900 H-50 Z" fill="#090d16" />
+      <path d="M-50 690 L400 660 L900 690 L1400 650 L1650 690 V900 H-50 Z" fill="#111827" />
+    </svg>
+  );
+}
+
+function WesternSky() {
+  return (
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="wsky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#4c1d95" /><stop offset=".35" stopColor="#be185d" /><stop offset=".7" stopColor="#ea580c" /><stop offset="1" stopColor="#fef08a" />
+        </linearGradient>
+        <radialGradient id="wsun">
+          <stop offset="0" stopColor="#fffbeb" /><stop offset=".4" stopColor="#fde047" stopOpacity=".9" /><stop offset="1" stopColor="#fde047" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#wsky)" />
+      {/* Sunset sun */}
+      <circle cx="1200" cy="380" r="160" fill="url(#wsun)" />
+      <circle cx="1200" cy="380" r="54" fill="#fffbeb" />
+      {/* Evening Stars */}
+      {[[180, 110], [420, 80], [780, 140], [1420, 100]].map(([x, y], i) => (
+        <polygon key={i} className="star" points={`${x},${y-8} ${x+2},${y-2} ${x+8},${y} ${x+2},${y+2} ${x},${y+8} ${x-2},${y+2} ${x-8},${y} ${x-2},${y-2}`} fill="#fff" />
+      ))}
+      {/* Sandstone Mesas and Buttes */}
+      <path d="M-60 620 L80 440 H280 L360 620 Z" fill="#78350f" opacity=".7" />
+      <path d="M720 620 L860 380 H1060 L1180 620 Z" fill="#78350f" opacity=".6" />
+      <path d="M300 640 L450 480 H620 L740 640 Z" fill="#9a3412" opacity=".8" />
+      <path d="M1120 640 L1260 460 H1440 L1560 640 Z" fill="#9a3412" opacity=".85" />
+      {/* Rolling desert ground */}
+      <path d="M-50 630 Q300 560 700 620 T1650 600 V900 H-50 Z" fill="#b45309" />
+      <path d="M-50 680 Q450 620 950 670 T1650 650 V900 H-50 Z" fill="#7c2d12" />
+      {/* Saguaro Cacti */}
+      <g transform="translate(180 540)" fill="#365314">
+        <rect x="-8" y="-110" width="16" height="110" rx="8" />
+        <path d="M-8 -65 H-34 V-100 H-22 V-52 H-8 Z" />
+        <path d="M8 -45 H34 V-80 H22 V-32 H8 Z" />
+      </g>
+      <g transform="translate(1420 570) scale(0.8)" fill="#365314">
+        <rect x="-8" y="-110" width="16" height="110" rx="8" />
+        <path d="M-8 -55 H-30 V-88 H-18 V-42 H-8 Z" />
+        <path d="M8 -70 H30 V-105 H18 V-58 H8 Z" />
+      </g>
+    </svg>
+  );
+}
+
+function DinoSky() {
+  return (
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="dsky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#064e3b" /><stop offset=".45" stopColor="#047857" /><stop offset=".8" stopColor="#f59e0b" /><stop offset="1" stopColor="#fef08a" />
+        </linearGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#dsky)" />
+      {/* Friendly Smoking Volcano */}
+      <g transform="translate(420 440)">
+        <polygon points="-220,260 0,0 220,260" fill="#44403c" />
+        <polygon points="-50,0 0,-15 50,0 35,40 -35,40" fill="#ea580c" />
+        {/* Puffs of smoke */}
+        <circle cx="0" cy="-45" r="24" fill="#f5f5f4" opacity=".6" />
+        <circle cx="28" cy="-80" r="34" fill="#f5f5f4" opacity=".5" />
+        <circle cx="65" cy="-125" r="42" fill="#f5f5f4" opacity=".4" />
+      </g>
+      {/* Distant Pterodactyl */}
+      <path d="M1100 180 Q1120 160 1140 180 Q1160 160 1180 180 Q1150 170 1140 195 Q1130 170 1100 180 Z" fill="#292524" />
+      {/* Lush jungle ridge */}
+      <path d="M-50 630 Q350 540 800 620 T1650 590 V900 H-50 Z" fill="#15803d" />
+      <path d="M-50 680 Q500 610 1000 660 T1650 640 V900 H-50 Z" fill="#166534" />
+    </svg>
+  );
+}
+
 export function Scenery({ themeId }: { themeId: string }) {
   return (
     <div className="scenery" aria-hidden>
-      {themeId === 'super' ? <SuperSky /> : themeId === 'pups' ? <PupsSky /> : themeId === 'rescue' ? <RescueSky /> : <PirateSky />}
+      {themeId === 'space-ranger' ? <SpaceRangerSky /> :
+       themeId === 'western' ? <WesternSky /> :
+       themeId === 'dino' ? <DinoSky /> :
+       themeId === 'super' ? <SuperSky /> :
+       themeId === 'pups' ? <PupsSky /> :
+       themeId === 'rescue' ? <RescueSky /> :
+       <PirateSky />}
     </div>
   );
 }
@@ -204,6 +334,121 @@ export function HelperAvatar({
         <path className="mouth" d="M41 64 q9 8 18 0" stroke="#4a2fc0" strokeWidth="3.5" fill="none" strokeLinecap="round" />
         <rect x="32" y="74" width="36" height="20" rx="8" fill="#6a3df0" stroke="#4a2fc0" strokeWidth="3" />
         <path d="M52 77 l-8 9 h6 l-2 7 l9 -11 h-6Z" fill="#ffd23f" />
+      </svg>
+    );
+  }
+  if (theme.id === 'space-ranger') {
+    return (
+      <svg className={cls} width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={theme.helper.name}>
+        <defs>
+          <linearGradient id="bzsuit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffffff" /><stop offset="1" stopColor="#cbd5e1" /></linearGradient>
+          <linearGradient id="bzarmor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4ade80" /><stop offset="1" stopColor="#16a34a" /></linearGradient>
+          <linearGradient id="bzhood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#c084fc" /><stop offset="1" stopColor="#7e22ce" /></linearGradient>
+          <linearGradient id="bzglass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#a5f3fc" stopOpacity=".55" /><stop offset="1" stopColor="#38bdf8" stopOpacity=".15" /></linearGradient>
+        </defs>
+        {/* Space ranger jet wings folded behind */}
+        <polygon points="12,48 2,34 16,38" fill="#ef4444" stroke="#991b1b" strokeWidth="1.5" />
+        <polygon points="88,48 98,34 84,38" fill="#22c55e" stroke="#166534" strokeWidth="1.5" />
+        {/* White shoulders */}
+        <circle cx="24" cy="74" r="14" fill="url(#bzsuit)" stroke="#94a3b8" strokeWidth="2.5" />
+        <circle cx="76" cy="74" r="14" fill="url(#bzsuit)" stroke="#94a3b8" strokeWidth="2.5" />
+        {/* Green torso armor */}
+        <path d="M22 66 Q50 60 78 66 L74 94 Q50 98 26 94 Z" fill="url(#bzarmor)" stroke="#15803d" strokeWidth="2.5" />
+        {/* Buttons on chest */}
+        <circle cx="36" cy="78" r="4.2" fill="#3b82f6" />
+        <circle cx="46" cy="78" r="4.2" fill="#ef4444" />
+        <circle cx="56" cy="78" r="4.2" fill="#eab308" />
+        {/* Laser Star badge */}
+        <polygon points="66,74 69,82 63,82" fill="#ef4444" />
+        {/* Purple Cowl / Hood */}
+        <ellipse cx="50" cy="46" rx="24" ry="26" fill="url(#bzhood)" stroke="#581c87" strokeWidth="2" />
+        {/* Face */}
+        <ellipse cx="50" cy="47" rx="17" ry="19" fill="#fde68a" />
+        {/* Eyes */}
+        <g className="blink">
+          <circle cx="43" cy="43" r="5" fill="#fff" /><circle cx="44" cy="43" r="3" fill="#1e293b" /><circle cx="45" cy="42" r="1.2" fill="#fff" />
+          <circle cx="57" cy="43" r="5" fill="#fff" /><circle cx="56" cy="43" r="3" fill="#1e293b" /><circle cx="55" cy="42" r="1.2" fill="#fff" />
+        </g>
+        {/* Hero eyebrows */}
+        <path d="M39 37 Q44 35 48 38" stroke="#78350f" strokeWidth="2" fill="none" strokeLinecap="round" />
+        <path d="M61 37 Q56 35 52 38" stroke="#78350f" strokeWidth="2" fill="none" strokeLinecap="round" />
+        {/* Smile and famous chin swirl */}
+        <path className="beak" d="M42 55 q8 6 16 0" stroke="#78350f" strokeWidth="2.8" fill="none" strokeLinecap="round" />
+        <path d="M49 60 a2 2 0 1 0 2 0" stroke="#b45309" strokeWidth="1.8" fill="none" />
+        {/* Transparent helmet dome */}
+        <circle cx="50" cy="44" r="29" fill="url(#bzglass)" stroke="#38bdf8" strokeWidth="2.2" opacity=".75" />
+        <ellipse cx="40" cy="30" rx="9" ry="4" fill="#fff" opacity=".6" transform="rotate(-25 40 30)" />
+      </svg>
+    );
+  }
+  if (theme.id === 'western') {
+    return (
+      <svg className={cls} width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={theme.helper.name}>
+        <defs>
+          <linearGradient id="wdhat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#92400e" /><stop offset="1" stopColor="#451a03" /></linearGradient>
+          <linearGradient id="wdshirt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fef08a" /><stop offset="1" stopColor="#facc15" /></linearGradient>
+        </defs>
+        {/* Yellow plaid shirt & cowhide vest */}
+        <path d="M22 72 Q50 68 78 72 L76 96 Q50 99 24 96 Z" fill="url(#wdshirt)" stroke="#ca8a04" strokeWidth="2" />
+        <path d="M22 72 L36 96 H24 Z M78 72 L64 96 H76 Z" fill="#f8fafc" stroke="#334155" strokeWidth="2" />
+        <path d="M26 78 Q30 82 25 86 Z M73 80 Q69 85 75 90 Z" fill="#1e293b" />
+        {/* Red Bandana */}
+        <polygon points="42,67 58,67 50,77" fill="#ef4444" stroke="#991b1b" strokeWidth="1.5" />
+        {/* Gold Sheriff Badge */}
+        <g transform="translate(34 78) scale(0.65)">
+          <polygon className="glow" points="10,1 12,7 19,7 13,11 15,18 10,14 5,18 7,11 1,7 8,7" fill="#facc15" stroke="#b45309" strokeWidth="1.2" />
+          <circle cx="10" cy="10" r="3" fill="#b45309" />
+        </g>
+        {/* Face */}
+        <ellipse cx="50" cy="50" rx="19" ry="21" fill="#fde68a" stroke="#d97706" strokeWidth="2" />
+        <circle cx="36" cy="54" r="4" fill="#fca5a5" opacity=".5" />
+        <circle cx="64" cy="54" r="4" fill="#fca5a5" opacity=".5" />
+        {/* Eyes */}
+        <g className="blink">
+          <circle cx="43" cy="46" r="5" fill="#fff" /><circle cx="44" cy="46" r="3" fill="#451a03" /><circle cx="45" cy="45" r="1.2" fill="#fff" />
+          <circle cx="57" cy="46" r="5" fill="#fff" /><circle cx="56" cy="46" r="3" fill="#451a03" /><circle cx="55" cy="45" r="1.2" fill="#fff" />
+        </g>
+        {/* Warm smile */}
+        <path className="beak" d="M41 58 q9 8 18 0" stroke="#78350f" strokeWidth="3" fill="none" strokeLinecap="round" />
+        {/* Tall Cowboy Hat */}
+        <g transform="translate(0 -2)">
+          {/* Hat crown with crease */}
+          <path d="M34 32 Q32 10 46 14 Q50 16 54 14 Q68 10 66 32 Z" fill="#78350f" stroke="#451a03" strokeWidth="2.5" />
+          <path d="M33 30 H67 V34 H33 Z" fill="#451a03" />
+          {/* Wide curved hat brim */}
+          <ellipse cx="50" cy="33" rx="38" ry="10" fill="#92400e" stroke="#451a03" strokeWidth="2.5" />
+          <path d="M14 34 Q50 24 86 34" stroke="#b45309" strokeWidth="2" fill="none" />
+        </g>
+      </svg>
+    );
+  }
+  if (theme.id === 'dino') {
+    return (
+      <svg className={cls} width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={theme.helper.name}>
+        <defs>
+          <linearGradient id="dnbody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4ade80" /><stop offset="1" stopColor="#15803d" /></linearGradient>
+        </defs>
+        {/* T-Rex round body */}
+        <ellipse cx="50" cy="68" rx="26" ry="24" fill="url(#dnbody)" stroke="#14532d" strokeWidth="2.5" />
+        <ellipse cx="50" cy="72" rx="16" ry="17" fill="#bbf7d0" />
+        {/* Tiny encouraging T-Rex arms */}
+        <path d="M30 64 Q20 58 24 70" stroke="#16a34a" strokeWidth="5" strokeLinecap="round" fill="none" />
+        <path d="M70 64 Q80 58 76 70" stroke="#16a34a" strokeWidth="5" strokeLinecap="round" fill="none" />
+        {/* Head and snout */}
+        <ellipse cx="50" cy="42" rx="23" ry="21" fill="url(#dnbody)" stroke="#14532d" strokeWidth="2.5" />
+        <ellipse cx="50" cy="49" rx="17" ry="12" fill="#86efac" />
+        {/* Nostrils */}
+        <circle cx="45" cy="44" r="2" fill="#14532d" />
+        <circle cx="55" cy="44" r="2" fill="#14532d" />
+        {/* Big cute dinosaur eyes */}
+        <g className="blink">
+          <circle cx="39" cy="34" r="7" fill="#fff" /><circle cx="40" cy="34" r="4.2" fill="#14532d" /><circle cx="41.5" cy="32.5" r="1.6" fill="#fff" />
+          <circle cx="61" cy="34" r="7" fill="#fff" /><circle cx="60" cy="34" r="4.2" fill="#14532d" /><circle cx="61.5" cy="32.5" r="1.6" fill="#fff" />
+        </g>
+        {/* Big happy mouth with cute rounded teeth */}
+        <path className="beak" d="M38 52 q12 10 24 0" stroke="#14532d" strokeWidth="3" fill="#f87171" strokeLinecap="round" />
+        <polygon points="44,52 46,55 48,52" fill="#fff" />
+        <polygon points="52,52 54,55 56,52" fill="#fff" />
       </svg>
     );
   }
@@ -289,6 +534,38 @@ export function HelperAvatar({
 
 /** Collectible icon per theme. Sizes with the surrounding font-size. */
 export function Collectible({ themeId, className = '' }: { themeId: string; className?: string }) {
+  if (themeId === 'space-ranger') {
+    return (
+      <svg className={`collect ${className}`} viewBox="0 0 40 40" width="1em" height="1em" aria-hidden>
+        <polygon points="20,4 34,12 34,28 20,36 6,28 6,12" fill="#0f172a" stroke="#38ef7d" strokeWidth="3" />
+        <polygon points="20,8 30,14 30,26 20,32 10,26 10,14" fill="#a855f7" opacity=".85" />
+        <polygon points="20,11 23,17 29,17 24,21 26,27 20,24 14,27 16,21 11,17 17,17" fill="#38ef7d" />
+      </svg>
+    );
+  }
+  if (themeId === 'western') {
+    return (
+      <svg className={`collect ${className}`} viewBox="0 0 40 40" width="1em" height="1em" aria-hidden>
+        <polygon points="20,4 24,15 35,15 26,22 29,33 20,26 11,33 14,22 5,15 16,15" fill="#facc15" stroke="#92400e" strokeWidth="2.5" strokeLinejoin="round" />
+        <circle cx="20" cy="4" r="2.2" fill="#92400e" />
+        <circle cx="35" cy="15" r="2.2" fill="#92400e" />
+        <circle cx="29" cy="33" r="2.2" fill="#92400e" />
+        <circle cx="11" cy="33" r="2.2" fill="#92400e" />
+        <circle cx="5" cy="15" r="2.2" fill="#92400e" />
+        <circle cx="20" cy="19" r="4.5" fill="#ca8a04" stroke="#78350f" strokeWidth="1.5" />
+      </svg>
+    );
+  }
+  if (themeId === 'dino') {
+    return (
+      <svg className={`collect ${className}`} viewBox="0 0 40 40" width="1em" height="1em" aria-hidden>
+        <ellipse cx="20" cy="22" rx="14" ry="17" fill="#fef08a" stroke="#15803d" strokeWidth="3" />
+        <ellipse cx="16" cy="17" rx="3.5" ry="4.5" fill="#4ade80" />
+        <ellipse cx="24" cy="25" rx="4" ry="3.5" fill="#4ade80" />
+        <ellipse cx="18" cy="28" rx="2.5" ry="2.5" fill="#4ade80" />
+      </svg>
+    );
+  }
   if (themeId === 'super') {
     return (
       <svg className={`collect ${className}`} viewBox="0 0 40 40" width="1em" height="1em" aria-hidden>
@@ -332,7 +609,13 @@ export function Collectible({ themeId, className = '' }: { themeId: string; clas
 
 /** Winding dotted treasure trail connecting the islands on the Hub map. */
 export function MapTrail({ themeId }: { themeId: string }) {
-  const stroke = themeId === 'super' ? '#59f0ff' : themeId === 'pups' ? '#fff' : themeId === 'rescue' ? '#fde68a' : '#fff3b0';
+  const stroke =
+    themeId === 'space-ranger' ? '#38ef7d' :
+    themeId === 'western' ? '#ffe400' :
+    themeId === 'dino' ? '#52b788' :
+    themeId === 'super' ? '#59f0ff' :
+    themeId === 'pups' ? '#fff' :
+    themeId === 'rescue' ? '#fde68a' : '#fff3b0';
   return (
     <svg className="map-trail" viewBox="0 0 1000 180" preserveAspectRatio="none" aria-hidden>
       <path
@@ -350,6 +633,37 @@ export function MapTrail({ themeId }: { themeId: string }) {
 
 /** Island platform: sand + water ring (pirate/pups), glowing pad (super), or mossy stone (rescue). */
 export function IslandBase({ themeId, tone }: { themeId: string; tone: string }) {
+  if (themeId === 'space-ranger') {
+    return (
+      <svg className="island-base" viewBox="0 0 240 150" aria-hidden>
+        <ellipse cx="120" cy="122" rx="90" ry="15" fill="#000" opacity=".35" />
+        <polygon points="120,54 204,74 204,104 120,124 36,104 36,74" fill="#0f172a" stroke="#38ef7d" strokeWidth="4" />
+        <polygon points="120,60 196,78 196,98 120,116 44,98 44,78" fill={tone} opacity=".4" />
+        <ellipse cx="120" cy="88" rx="60" ry="18" fill="#1e293b" stroke="#00f2fe" strokeWidth="2.5" />
+      </svg>
+    );
+  }
+  if (themeId === 'western') {
+    return (
+      <svg className="island-base" viewBox="0 0 240 150" aria-hidden>
+        <ellipse cx="120" cy="122" rx="92" ry="16" fill="#000" opacity=".26" />
+        <path d="M30 88 L60 62 H180 L210 88 L190 120 H50 Z" fill="#9a3412" stroke="#451a03" strokeWidth="3" />
+        <ellipse cx="120" cy="80" rx="84" ry="24" fill={tone} stroke="#ffe400" strokeWidth="3" />
+        <ellipse cx="120" cy="80" rx="64" ry="16" fill="#78350f" opacity=".2" />
+      </svg>
+    );
+  }
+  if (themeId === 'dino') {
+    return (
+      <svg className="island-base" viewBox="0 0 240 150" aria-hidden>
+        <ellipse cx="120" cy="122" rx="94" ry="16" fill="#000" opacity=".28" />
+        <path d="M26 94 Q40 56 120 54 Q200 56 214 94 Q170 124 120 126 Q70 124 26 94Z" fill="#14532d" stroke="#22c55e" strokeWidth="3" />
+        <ellipse cx="120" cy="86" rx="82" ry="24" fill={tone} opacity=".85" />
+        <path d="M40 76 Q70 64 90 78" stroke="#166534" strokeWidth="4" fill="none" strokeLinecap="round" />
+        <path d="M150 78 Q170 64 200 76" stroke="#166534" strokeWidth="4" fill="none" strokeLinecap="round" />
+      </svg>
+    );
+  }
   if (themeId === 'super') {
     return (
       <svg className="island-base" viewBox="0 0 240 150" aria-hidden>

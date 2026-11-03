@@ -100,6 +100,7 @@ export interface Theme {
       pitch: number;
       rate: number;
       kokoroVoice: string; // e.g. 'bm_george', 'af_bella', 'am_adam', 'af_heart'
+      voiceNamePattern?: string;
     };
   };
   colors: { bg1: string; bg2: string; primary: string; accent: string; card: string; text: string };

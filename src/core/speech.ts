@@ -38,16 +38,17 @@ export function loadRecordedSounds() {
     .catch(() => {});
 }
 
-let activeThemeVoice: { pitch: number; rate: number; kokoroVoice?: string } = { pitch: 1.1, rate: 0.9 };
+let activeThemeVoice: { pitch: number; rate: number; kokoroVoice?: string; voiceNamePattern?: string } = { pitch: 1.1, rate: 0.9 };
 
-export function setThemeVoice(style: { pitch: number; rate: number; kokoroVoice?: string }) {
+export function setThemeVoice(style: { pitch: number; rate: number; kokoroVoice?: string; voiceNamePattern?: string }) {
   activeThemeVoice = { ...style };
 }
 
 function pickVoice(preferredVoice?: string): SpeechSynthesisVoice | undefined {
   const voices = synth?.getVoices() ?? [];
-  if (preferredVoice) {
-    const match = voices.find((v) => new RegExp(preferredVoice, 'i').test(v.name));
+  const target = preferredVoice || activeThemeVoice.voiceNamePattern;
+  if (target) {
+    const match = voices.find((v) => new RegExp(target, 'i').test(v.name));
     if (match) return match;
   }
   // Look for friendly, high quality natural speech voices
@@ -64,7 +65,7 @@ export function stopSpeaking() {
 }
 
 /** Speak text. Resolves when finished (or after estimated duration on TV bridge). */
-export function speak(text: string, opts: { rate?: number; pitch?: number; interrupt?: boolean } = {}): Promise<void> {
+export function speak(text: string, opts: { rate?: number; pitch?: number; interrupt?: boolean; voiceNamePattern?: string } = {}): Promise<void> {
   return new Promise((resolve) => {
     const clean = text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]/g, '').trim();
     if (!clean) return resolve();
@@ -91,7 +92,7 @@ export function speak(text: string, opts: { rate?: number; pitch?: number; inter
       const u = new SpeechSynthesisUtterance(clean);
       u.rate = finalRate;
       u.pitch = finalPitch;
-      const v = pickVoice();
+      const v = pickVoice(opts.voiceNamePattern);
       if (v) u.voice = v;
       let finished = false;
       const done = () => { if (!finished) { finished = true; clearTimeout(guard); resolve(); } };

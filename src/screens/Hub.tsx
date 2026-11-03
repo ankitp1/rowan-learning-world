@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { frontier } from '../core/engine';
 import { patchProfile } from '../core/db';
 import { APPS } from '../core/registry';
+import { speak } from '../core/speech';
 import { THEMES, themeById } from '../core/themes';
 import type { MiniApp, Profile, Subject, Theme } from '../core/types';
 import { isVoiceSupported, toggleVoiceListening, useVoice } from '../core/voice';
@@ -14,6 +15,9 @@ const TONE: Record<string, Record<string, string>> = {
   super: { reading: '#59f0ff', math: '#80ed99', mystery: '#ff7eb6', brain: '#b388ff', games: '#ffd23f' },
   pups: { reading: '#ffd166', math: '#ff758f', mystery: '#a8dadc', brain: '#95d5b2', games: '#ffbe0b' },
   rescue: { reading: '#a7f3d0', math: '#fde68a', mystery: '#f9a8d4', brain: '#c4b5fd', games: '#fdba74' },
+  'space-ranger': { reading: '#a855f7', math: '#38ef7d', mystery: '#00f2fe', brain: '#818cf8', games: '#f59e0b' },
+  western: { reading: '#f4a261', math: '#e76f51', mystery: '#e9c46a', brain: '#2a9d8f', games: '#e63946' },
+  dino: { reading: '#52b788', math: '#f4a261', mystery: '#e76f51', brain: '#74c69d', games: '#b7e4c7' },
 };
 
 export type IslandKey = 'reading' | 'math' | 'mystery' | 'brain' | 'games';
@@ -44,6 +48,9 @@ function helperGreeting(theme: Theme, name: string): string {
   if (theme.id === 'pirate') return `Ahoy, Captain ${name}! I'm Barnaby${role}. The seas look bright and I'm ready to explore with you!`;
   if (theme.id === 'pups') return `Ruff-ruff, Pup Leader ${name}! Pip and Scout are on duty! No puzzle is too big for us!`;
   if (theme.id === 'rescue') return `Welcome back, Ranger ${name}! Luna and Blaze are watching the magical creatures. Ready for a wonder walk?`;
+  if (theme.id === 'space-ranger') return `Star Command to Ranger ${name}! This is Ranger Buzz. All systems are green and we're ready to fly to learning and beyond!`;
+  if (theme.id === 'western') return `Howdy, Deputy ${name}! I'm Sheriff Woody. There's adventure on the trail, and you've got a true friend in me!`;
+  if (theme.id === 'dino') return `Roar! I mean... hello, Explorer ${name}! I'm Rex. I'm so excited to explore the prehistoric valley with you!`;
   return `Greetings, Hero ${name}! Bolt and Nova here. Your super brain is charged up and ready!`;
 }
 
@@ -101,9 +108,20 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
       <h1 className="map-title">{theme.mapTitle.replace('{name}', profile.name)}</h1>
       <div className="map">
         {theme.decor.map((d, i) => <span key={i} className={`decor d${i}`} aria-hidden>{d}</span>)}
-        <div className="hub-helper">
+        <div
+          className="hub-helper"
+          role="button"
+          tabIndex={0}
+          onClick={() => void speak(helperGreeting(theme, profile.name))}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void speak(helperGreeting(theme, profile.name)); } }}
+          title={`Click to hear ${theme.helper.name}`}
+          style={{ cursor: 'pointer' }}
+        >
           <HelperAvatar theme={theme} size={114} talking />
-          <div className="bubble"><p>{helperGreeting(theme, profile.name)}</p></div>
+          <div className="bubble">
+            <p>{helperGreeting(theme, profile.name)}</p>
+            <span style={{ display: 'block', fontSize: '11px', opacity: 0.65, marginTop: '2px' }}>🔊 Tap to hear</span>
+          </div>
         </div>
         <button className="mission-btn" data-autofocus onClick={onMission}>
           <span className="m-emoji">{theme.pieces[0]}</span>
