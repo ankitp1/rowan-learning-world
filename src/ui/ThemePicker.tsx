@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Theme } from '../core/types';
 import { HelperAvatar } from './Art';
-import { sfx, speak, stopSpeaking } from '../core/speech';
+import { sfx, speakThemeGreeting, speakThemeSample, stopSpeaking } from '../core/speech';
 
 const SAMPLE_QUOTES: Record<string, string> = {
   'space-ranger': 'To learning... and beyond! Star Command reporting! Ready for our mission, Cadet!',
@@ -33,11 +33,7 @@ export function ThemePickerModal({
     stopSpeaking();
     setPlayingId(t.id);
     const quote = SAMPLE_QUOTES[t.id] ?? t.praise[0] ?? 'Hello!';
-    void speak(quote.replace('{name}', childName), {
-      pitch: t.helper?.voiceStyle?.pitch,
-      rate: t.helper?.voiceStyle?.rate,
-      voiceNamePattern: t.helper?.voiceStyle?.voiceNamePattern,
-    }).then(() => {
+    void speakThemeSample(t.id, quote.replace('{name}', childName)).then(() => {
       setPlayingId((cur) => (cur === t.id ? null : cur));
     });
   };
@@ -46,11 +42,7 @@ export function ThemePickerModal({
     sfx.good();
     onSelect(t.id);
     const quote = SAMPLE_QUOTES[t.id] ?? t.praise[0] ?? 'Hello!';
-    void speak(quote.replace('{name}', childName), {
-      pitch: t.helper?.voiceStyle?.pitch,
-      rate: t.helper?.voiceStyle?.rate,
-      voiceNamePattern: t.helper?.voiceStyle?.voiceNamePattern,
-    });
+    void speakThemeGreeting(t.id, childName, quote.replace('{name}', childName));
     onClose();
   };
 

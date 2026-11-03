@@ -1,17 +1,47 @@
+import { useState } from 'react';
 import type { Question, Theme } from '../core/types';
+import { sfx, speak } from '../core/speech';
 import { Collectible } from './Art';
 
-/** Coins (or sparks) in rows of five. `lit` dims everything after the first N (used while counting aloud). */
-export function CoinGrid({ n, themeId, lit, gone = 0, alt = false }: {
-  n: number; themeId: string; lit?: number; gone?: number; alt?: boolean;
+/** Coins (or sparks) in rows of five. Tap-to-count with audio feedback. */
+export function CoinGrid({ n, themeId, lit, gone = 0, alt = false, offset = 0 }: {
+  n: number; themeId: string; lit?: number; gone?: number; alt?: boolean; offset?: number;
 }) {
+  const [tapped, setTapped] = useState<number | null>(null);
   return (
     <div className={`coins${alt ? ' alt' : ''}`} aria-label={`${n} items`}>
       {Array.from({ length: n }, (_, i) => {
         const isGone = i >= n - gone;
         const dim = lit !== undefined && i >= lit && !isGone;
-        const on = lit !== undefined && i < lit && !isGone;
-        return <span key={i} className={`coin${dim ? ' dim' : ''}${on ? ' lit' : ''}${isGone ? ' gone' : ''}`}><Collectible themeId={themeId} /></span>;
+        const on = (lit !== undefined && i < lit && !isGone) || tapped === i;
+        const countNum = offset + i + 1;
+        return (
+          <span
+            key={i}
+            className={`coin${dim ? ' dim' : ''}${on ? ' lit' : ''}${isGone ? ' gone' : ''}`}
+            role="button"
+            tabIndex={isGone ? -1 : 0}
+            onClick={() => {
+              if (isGone) return;
+              sfx.tap();
+              setTapped(i);
+              void speak(String(countNum), { rate: 1.05 });
+              setTimeout(() => setTapped(null), 350);
+            }}
+            onKeyDown={(e) => {
+              if (!isGone && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                sfx.tap();
+                setTapped(i);
+                void speak(String(countNum), { rate: 1.05 });
+                setTimeout(() => setTapped(null), 350);
+              }
+            }}
+            aria-label={`Counter ${countNum}`}
+          >
+            <Collectible themeId={themeId} />
+          </span>
+        );
       })}
     </div>
   );
@@ -120,7 +150,7 @@ export function MathVisual({ q, theme, hi, hintLevel = 0 }: { q: Question; theme
             <div className="piles">
               <CoinGrid n={a} themeId={e} lit={lit(a)} />
               <span className="vs">+</span>
-              <CoinGrid n={b} themeId={e} lit={lit(b, a)} alt />
+              <CoinGrid n={b} themeId={e} lit={lit(b, a)} alt offset={a} />
             </div>
           )}
           {showCoach && (

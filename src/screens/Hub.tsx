@@ -2,12 +2,13 @@ import { useMemo, useState } from 'react';
 import { frontier } from '../core/engine';
 import { patchProfile } from '../core/db';
 import { APPS } from '../core/registry';
-import { speak } from '../core/speech';
+import { speak, speakThemeGreeting } from '../core/speech';
 import { THEMES, themeById } from '../core/themes';
 import type { MiniApp, Profile, Subject, Theme } from '../core/types';
 import { isVoiceSupported, toggleVoiceListening, useVoice } from '../core/voice';
 import { AgeOnboardingModal } from '../ui/AgeOnboarding';
 import { HelperAvatar, IslandBase, MapTrail } from '../ui/Art';
+import { HubOptionsModal } from '../ui/HubOptionsModal';
 import { ThemePickerModal } from '../ui/ThemePicker';
 import { WelcomeTourModal } from '../ui/WelcomeTour';
 
@@ -62,6 +63,7 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
 }) {
   const [book, setBook] = useState(false);
   const [ageModal, setAgeModal] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showTour, setShowTour] = useState(() => {
     // Show on first run or if explicitly opened
@@ -107,24 +109,34 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
   return (
     <div className="screen hub">
       <header className="hub-top">
-        <button className="chip-btn" onClick={onSwitch}>{profile.avatar} {profile.name}</button>
-        <span className="stars-count" aria-label={`${profile.stars} stars`}>⭐ {profile.stars}</span>
-        <button className="chip-btn" onClick={() => setBook(true)}>📖 Stickers</button>
-        <button className="chip-btn" onClick={() => setShowTour(true)}>💡 Tour</button>
-        <button className="chip-btn" onClick={() => setAgeModal(true)}>🎯 Age {profile.age ? (profile.age === 8 ? '8+' : profile.age) : 'Level'}</button>
-        {isVoiceSupported() && (
-          <button
-            className={`chip-btn voice-top${voice.status === 'listening' ? ' listening' : ''}`}
-            onClick={toggleVoiceListening}
-            aria-label={voice.status === 'listening' ? 'Stop listening' : 'Voice command'}
-          >
-            {voice.status === 'listening' ? '🎙️ Listening...' : '🎤 Voice'}
+        <div className="hub-top-group left">
+          <button className="chip-btn profile-chip" onClick={onSwitch} aria-label={`Player: ${profile.name}, tap to switch player`}>
+            <span className="chip-avatar">{profile.avatar}</span>
+            <span className="chip-name">{profile.name}</span>
           </button>
-        )}
-        <button className="chip-btn" onClick={() => setShowThemePicker(true)} aria-label="Change look and character buddy">
-          {theme.emoji} Change look
-        </button>
-        <button className="chip-btn lock" onClick={onGrownUps} aria-label="Grown-ups">🔒</button>
+          <button className="chip-btn stars-chip" onClick={() => setBook(true)} aria-label={`${profile.stars} stars, tap to view sticker album`}>
+            ⭐ {profile.stars}
+          </button>
+        </div>
+
+        <div className="hub-top-group right">
+          {isVoiceSupported() && (
+            <button
+              className={`chip-btn icon-chip voice-top${voice.status === 'listening' ? ' listening' : ''}`}
+              onClick={toggleVoiceListening}
+              aria-label={voice.status === 'listening' ? 'Stop listening' : 'Voice command'}
+              title="Voice commands"
+            >
+              {voice.status === 'listening' ? '🎙️ Listening...' : '🎤 Voice'}
+            </button>
+          )}
+          <button className="chip-btn menu-chip" onClick={() => setShowOptions(true)} aria-label="Adventure options and menu">
+            ⚙️ Menu
+          </button>
+          <button className="chip-btn lock" onClick={onGrownUps} aria-label="Grown-ups" title="Parent settings">
+            🔒
+          </button>
+        </div>
       </header>
       <h1 className="map-title">{theme.mapTitle.replace('{name}', profile.name)}</h1>
       <div className="map">
@@ -133,8 +145,8 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
           className="hub-helper"
           role="button"
           tabIndex={0}
-          onClick={() => void speak(helperGreeting(theme, profile.name))}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void speak(helperGreeting(theme, profile.name)); } }}
+          onClick={() => void speakThemeGreeting(theme.id, profile.name, helperGreeting(theme, profile.name))}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void speakThemeGreeting(theme.id, profile.name, helperGreeting(theme, profile.name)); } }}
           title={`Click to hear ${theme.helper.name}`}
           style={{ cursor: 'pointer' }}
         >
@@ -163,6 +175,19 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
       </div>
       {book && <StickerBook profile={profile} theme={theme} onClose={() => setBook(false)} />}
       {ageModal && <AgeOnboardingModal profile={profile} onClose={() => setAgeModal(false)} />}
+      {showOptions && (
+        <HubOptionsModal
+          theme={theme}
+          profileName={profile.name}
+          currentAge={profile.age}
+          onOpenThemePicker={() => setShowThemePicker(true)}
+          onOpenAgeModal={() => setAgeModal(true)}
+          onOpenStickerBook={() => setBook(true)}
+          onOpenTour={() => setShowTour(true)}
+          onOpenGrownUps={onGrownUps}
+          onClose={() => setShowOptions(false)}
+        />
+      )}
       {showThemePicker && (
         <ThemePickerModal
           currentThemeId={theme.id}

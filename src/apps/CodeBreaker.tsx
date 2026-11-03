@@ -94,12 +94,40 @@ function Game({ level, theme, onWin, onNext, onExit }: {
         <span className="vault-emoji">{theme.container.emoji}</span>
         {Array.from({ length: spec.len }, (_, i) => <span key={i} className="gem secret">{status === 'play' ? '?' : <Gem i={secret[i]} />}</span>)}
       </div>
-      <div ref={historyRef} className="code-history" aria-label="your guesses">
-        {history.map((h, i) => (
-          <div key={i} className="code-row" tabIndex={0} aria-label={`Guess ${i + 1}: ${h.exact} right spot, ${h.near} wrong spot`}>
-            <b>{i + 1}</b>{h.guess.map((g, k) => <Gem key={k} i={g} />)}<Feedback exact={h.exact} near={h.near} len={spec.len} />
-          </div>
-        ))}
+      <div className="code-history-wrap">
+        <div className="code-history-header">
+          <span>{history.length > 0 ? `Attempts (${history.length}/${spec.maxTries})` : `Attempts (0/${spec.maxTries})`}</span>
+          {history.length > 2 && (
+            <div className="history-scroll-btns">
+              <button
+                type="button"
+                className="scroll-btn"
+                onClick={() => historyRef.current?.scrollBy({ top: -80, behavior: 'smooth' })}
+                aria-label="Scroll up to older attempts"
+                title="Older attempts"
+              >
+                ▲
+              </button>
+              <button
+                type="button"
+                className="scroll-btn"
+                onClick={() => historyRef.current?.scrollBy({ top: 80, behavior: 'smooth' })}
+                aria-label="Scroll down to recent attempts"
+                title="Recent attempts"
+              >
+                ▼
+              </button>
+            </div>
+          )}
+        </div>
+        <div ref={historyRef} className="code-history" aria-label="your guesses" tabIndex={0}>
+          {history.length === 0 && <span className="history-empty">Your guesses will appear here</span>}
+          {history.map((h, i) => (
+            <div key={i} className="code-row" tabIndex={0} aria-label={`Guess ${i + 1}: ${h.exact} right spot, ${h.near} wrong spot`}>
+              <b>{i + 1}</b>{h.guess.map((g, k) => <Gem key={k} i={g} />)}<Feedback exact={h.exact} near={h.near} len={spec.len} />
+            </div>
+          ))}
+        </div>
       </div>
       {status === 'play' && (
         <>

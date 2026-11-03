@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { fill } from '../content/generators';
 import { focusFirst } from '../core/nav';
-import { sfx, soundOut, speak, speakSound, stopSpeaking } from '../core/speech';
+import { sfx, soundOut, speak, speakSound, speakThemeEncouragement, speakThemePraise, stopSpeaking } from '../core/speech';
 import type { Choice, HintMode, Profile, Question, Theme, TimerMode } from '../core/types';
 import { isVoiceSupported, registerQuestionVoiceHandler, toggleVoiceListening, useVoice } from '../core/voice';
 import { HelperAvatar } from './Art';
@@ -51,11 +51,41 @@ export function HelperButton({ theme, level, max, onAsk }: { theme: Theme; level
   );
 }
 
-export function Bubble({ theme, text, mood = 'talking' }: { theme: Theme; text: string; mood?: 'idle' | 'talking' | 'cheer' }) {
+export function Bubble({
+  theme,
+  text,
+  mood = 'talking',
+  hintInfo,
+}: {
+  theme: Theme;
+  text: string;
+  mood?: 'idle' | 'talking' | 'cheer';
+  hintInfo?: { level: number; max: number; onAsk: () => void };
+}) {
   return (
     <div className={`bubble${mood === 'cheer' ? ' bubble-cheer' : ''}`} role="status">
-      <HelperAvatar theme={theme} size={68} talking mood={mood} />
-      <p>{text}</p>
+      <div className="bubble-avatar-wrap">
+        <HelperAvatar theme={theme} size={64} talking mood={mood} />
+      </div>
+      <div className="bubble-text">
+        <p>{text}</p>
+      </div>
+      {hintInfo && hintInfo.max > 0 && (
+        <button
+          className="bubble-hint-btn"
+          onClick={hintInfo.onAsk}
+          disabled={hintInfo.max - hintInfo.level <= 0}
+          aria-label="Ask the helper for a hint"
+          title="Need a hint?"
+        >
+          <span>💡 Hint</span>
+          <span className="pips mini-pips">
+            {Array.from({ length: hintInfo.max }, (_, i) => (
+              <i key={i} className={i < hintInfo.level ? 'used' : ''} />
+            ))}
+          </span>
+        </button>
+      )}
     </div>
   );
 }
@@ -88,6 +118,7 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
   const [joined, setJoined] = useState(false);
   const [lastPick, setLastPick] = useState<number | null>(null);
   const [bonusStars, setBonusStars] = useState<number | null>(null);
+  const [showStarFly, setShowStarFly] = useState(false);
   const cancel = useRef<() => void>(() => {});
   const alive = useRef(true);
   const voice = useVoice();
@@ -185,14 +216,22 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
     if (correct && limitSec > 0 && starsEarned > 1) setBonusStars(starsEarned);
     const res = { correct, given, expected: q.answer, hintsUsed: level, tags, ms, starsEarned };
     if (placement) { sfx.tap(); setBubble('Thanks! Next one!'); await sleep(500); if (alive.current) onResult(res); return; }
+    if (correct) setShowStarFly(true);
     sfx.good();
-    const praise = theme.praise[Math.floor(Math.random() * theme.praise.length)];
+    const praiseIdx = Math.floor(Math.random() * (theme.praise?.length || 1));
+    const praise = theme.praise[praiseIdx] || 'Great job!';
     const explain = level > 0 || !correct;
     const starNote = limitSec > 0 && starsEarned > 1 ? ` ⚡ +${starsEarned} Stars Speed Bonus!` : '';
     setBubble((explain ? fill(q.explain.text, theme) : praise) + starNote);
     cancel.current();
-    if (explain) { await speak(praise); await speak(fill(q.explain.say ?? q.explain.text, theme)); await sleep(500); }
-    else { await speak(praise); await sleep(350); }
+    if (explain) {
+      await speakThemePraise(theme, praiseIdx);
+      await speak(fill(q.explain.say ?? q.explain.text, theme));
+      await sleep(500);
+    } else {
+      await speakThemePraise(theme, praiseIdx);
+      await sleep(350);
+    }
     if (alive.current) onResult(res);
   }
 
@@ -208,10 +247,11 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
     sfx.soft();
     setWrong((w) => w ?? c);
     setGone((g) => [...g, c.id]);
-    const encouragement = theme.encouragements?.length
-      ? theme.encouragements[Math.floor(Math.random() * theme.encouragements.length)]
-      : "That was a good try! Let's listen closely and try another choice!";
-    say(fill(encouragement, theme));
+    const encList = theme.encouragements || [];
+    const encIdx = Math.floor(Math.random() * (encList.length || 1));
+    const encouragement = encList[encIdx] ?? "That was a good try! Let's listen closely and try another choice!";
+    setBubble(fill(encouragement, theme));
+    void speakThemeEncouragement(theme, encIdx);
   }
 
   const tapTile = (i: number) => {
@@ -322,22 +362,60 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
 
   return (
     <div className="qcard">
-      {limitSec > 0 && (
-        <div className={`qtimer tier-${liveStars}`} aria-label={`${remSec} seconds for speed bonus`}>
-          <div className="qtimer-bar">
-            <i style={{ width: `${Math.round(remRatio * 100)}%` }} />
-          </div>
-          <span className="qtimer-lbl">
-            {bonusStars ? `⚡ +${bonusStars} ⭐ Bonus!` : remSec > 0 ? `⏱️ ${remSec}s · ${'⭐'.repeat(liveStars)}` : '⏱️ Take your time · ⭐'}
-          </span>
+      {showStarFly && (
+        <div className="flying-stars-burst" aria-hidden>
+          <span className="star-fly s1">⭐</span>
+          {bonusStars && bonusStars > 1 && <span className="star-fly s2">⭐</span>}
+          {bonusStars && bonusStars > 2 && <span className="star-fly s3">⭐</span>}
         </div>
       )}
-      <Bubble theme={theme} mood={done ? 'cheer' : 'talking'} text={bubble || (placement ? 'Take your best guess. You can do it!' : `Take your time, ${profile.name}!`)} />
-      <div className="prompt">
-        <span>{prompt}</span>
-        <button className="icon-btn" aria-label="Read the question aloud" onClick={() => void speak(fill(q.say ?? q.prompt, theme))}>🔊</button>
+      <div className="qcard-top-row">
+        {limitSec > 0 && (
+          <div className={`qtimer tier-${liveStars}`} aria-label={`${remSec} seconds for speed bonus`}>
+            <div className="qtimer-bar">
+              <i style={{ width: `${Math.round(remRatio * 100)}%` }} />
+            </div>
+            <span className="qtimer-lbl">
+              {bonusStars ? `⚡ +${bonusStars} ⭐ Bonus!` : remSec > 0 ? `⏱️ ${remSec}s · ${'⭐'.repeat(liveStars)}` : '⏱️ Take your time · ⭐'}
+            </span>
+          </div>
+        )}
+        {isVoiceSupported() && (
+          <button
+            type="button"
+            className={`voice-indicator-chip${voice.status === 'listening' ? ' listening' : ''}`}
+            onClick={toggleVoiceListening}
+            aria-label={voice.status === 'listening' ? 'Stop listening' : 'Voice command or speak answer'}
+            title="Voice commands (or say your answer)"
+          >
+            <span>{voice.status === 'listening' ? '🎙️ Listening...' : '🎤 Voice'}</span>
+            {voice.lastTranscript && <small className="voice-heard">"{voice.lastTranscript}"</small>}
+          </button>
+        )}
       </div>
+
+      <Bubble
+        theme={theme}
+        mood={done ? 'cheer' : 'talking'}
+        text={bubble || (placement ? 'Take your best guess. You can do it!' : `Take your time, ${profile.name}!`)}
+        hintInfo={!placement && maxHints > 0 ? { level, max: maxHints, onAsk: ask } : undefined}
+      />
+
+      <div
+        className="prompt"
+        role="button"
+        tabIndex={0}
+        onClick={() => void speak(fill(q.say ?? q.prompt, theme))}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void speak(fill(q.say ?? q.prompt, theme)); } }}
+        aria-label={`${prompt}. Tap to read question aloud`}
+        title="Tap to hear question again"
+      >
+        <span className="prompt-text">{prompt}</span>
+        <span className="prompt-sound-cue" aria-hidden>🔊</span>
+      </div>
+
       <div className="visual">{visual}</div>
+
       <div className={`choices n${q.choices.length}${variant === 'ropes' ? ' ropes' : ''}${q.kind === 'follow' ? ' deck' : ''}`}>
         {q.choices.map((c, idx) => {
           const isGone = gone.includes(c.id);
@@ -351,20 +429,6 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
             </button>
           );
         })}
-      </div>
-      <div className="qcard-actions">
-        {!placement && maxHints > 0 && <HelperButton theme={theme} level={level} max={maxHints} onAsk={ask} />}
-        {isVoiceSupported() && (
-          <button
-            type="button"
-            className={`voice-btn${voice.status === 'listening' ? ' listening' : ''}`}
-            onClick={toggleVoiceListening}
-            aria-label={voice.status === 'listening' ? 'Stop listening' : 'Speak your answer or say a command'}
-          >
-            <span>{voice.status === 'listening' ? '🎙️ Listening...' : '🎤 Say it'}</span>
-            {voice.lastTranscript && <small className="voice-heard">"{voice.lastTranscript}"</small>}
-          </button>
-        )}
       </div>
     </div>
   );

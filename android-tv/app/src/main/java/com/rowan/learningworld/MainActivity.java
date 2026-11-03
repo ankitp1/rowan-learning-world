@@ -16,6 +16,7 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.Voice;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -30,6 +31,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 public class MainActivity extends Activity {
@@ -54,8 +56,10 @@ public class MainActivity extends Activity {
         public void speak(String text, float rate, float pitch, boolean flush) {
             if (tts == null || !ttsReady || text == null || text.trim().isEmpty()) return;
             try {
-                tts.setSpeechRate(Math.max(0.5f, Math.min(2.0f, rate)));
-                tts.setPitch(Math.max(0.6f, Math.min(1.6f, pitch)));
+                // Pitch shifting on Android TTS engine triggers metallic phase-vocoder distortion.
+                // Keeping pitch close to natural 1.0f produces clean, human-like voice synthesis.
+                tts.setSpeechRate(Math.max(0.75f, Math.min(1.3f, rate)));
+                tts.setPitch(Math.max(0.96f, Math.min(1.06f, pitch)));
                 int queueMode = flush ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD;
                 Bundle params = new Bundle();
                 params.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC);
@@ -281,6 +285,25 @@ public class MainActivity extends Activity {
             public void onInit(int status) {
                 if (status == TextToSpeech.SUCCESS && tts != null) {
                     tts.setLanguage(Locale.US);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        try {
+                            Set<Voice> voices = tts.getVoices();
+                            if (voices != null) {
+                                Voice bestVoice = null;
+                                for (Voice v : voices) {
+                                    if (v.getLocale() != null && Locale.US.getLanguage().equalsIgnoreCase(v.getLocale().getLanguage())) {
+                                        if (bestVoice == null || v.getQuality() > bestVoice.getQuality()) {
+                                            bestVoice = v;
+                                        }
+                                    }
+                                }
+                                if (bestVoice != null) {
+                                    tts.setVoice(bestVoice);
+                                }
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
                     AudioAttributes attrs = new AudioAttributes.Builder()
                             .setUsage(AudioAttributes.USAGE_MEDIA)
                             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)

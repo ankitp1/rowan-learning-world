@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { WONDER_TRIVIA_LIBRARY, type WonderTriviaItem } from '../content/wonderTrivia';
 import { awardStars } from '../core/engine';
-import { sfx, speak, stopSpeaking } from '../core/speech';
+import { sfx, speak, speakThemeEncouragement, speakThemePraise, stopSpeaking } from '../core/speech';
 import type { MiniAppProps } from '../core/types';
 import { Confetti } from '../ui/Art';
 import { GameShell } from '../ui/GameShell';
@@ -96,12 +96,17 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
         return next;
       });
       awardStars(profile.id, 1);
-      const helperPraise = theme.praise[Math.floor(Math.random() * theme.praise.length)];
-      void speak(`${helperPraise} ${currentQuestion.funFact}`);
+      const praiseIdx = Math.floor(Math.random() * (theme.praise?.length || 1));
+      void speakThemePraise(theme, praiseIdx).then(() => {
+        void speak(currentQuestion.funFact);
+      });
     } else {
       sfx.soft();
-      const encouragement = theme.encouragements[Math.floor(Math.random() * theme.encouragements.length)];
-      void speak(`${encouragement} The correct answer is ${currentQuestion.choices.find((c) => c.correct)?.text}.`);
+      const encIdx = Math.floor(Math.random() * (theme.encouragements?.length || 1));
+      const correctText = currentQuestion.choices.find((c) => c.correct)?.text;
+      void speakThemeEncouragement(theme, encIdx).then(() => {
+        if (correctText) void speak(`The correct answer is ${correctText}.`);
+      });
     }
     setShowFact(true);
   };
@@ -152,12 +157,12 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
                   <button key={a} type="button" className={`pick-btn${player1.avatar === a ? ' on' : ''}`} onClick={() => setPlayer1({ ...player1, avatar: a })}>{a}</button>
                 ))}
               </div>
-              <div className="age-pick">
-                <span className="small font-bold">Age: {player1.age} yrs</span>
-                <div className="row wrap gap-4">
-                  {[3, 4, 5, 6, 7, 8, 9, 10].map((age) => (
-                    <button key={age} type="button" className={`pick-btn age-btn${player1.age === age ? ' on' : ''}`} onClick={() => setPlayer1({ ...player1, age })}>{age}</button>
-                  ))}
+              <div className="age-stepper-wrap">
+                <span className="small font-bold">Question Level:</span>
+                <div className="age-stepper">
+                  <button type="button" className="stepper-btn" onClick={() => setPlayer1({ ...player1, age: Math.max(3, player1.age - 1) })} aria-label="Decrease age">−</button>
+                  <span className="stepper-val">Age {player1.age}</span>
+                  <button type="button" className="stepper-btn" onClick={() => setPlayer1({ ...player1, age: Math.min(10, player1.age + 1) })} aria-label="Increase age">+</button>
                 </div>
               </div>
             </div>
@@ -172,12 +177,12 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
                     <button key={a} type="button" className={`pick-btn${player2.avatar === a ? ' on' : ''}`} onClick={() => setPlayer2({ ...player2, avatar: a })}>{a}</button>
                   ))}
                 </div>
-                <div className="age-pick">
-                  <span className="small font-bold">Age: {player2.age} yrs</span>
-                  <div className="row wrap gap-4">
-                    {[3, 4, 5, 6, 7, 8, 9, 10].map((age) => (
-                      <button key={age} type="button" className={`pick-btn age-btn${player2.age === age ? ' on' : ''}`} onClick={() => setPlayer2({ ...player2, age })}>{age}</button>
-                    ))}
+                <div className="age-stepper-wrap">
+                  <span className="small font-bold">Question Level:</span>
+                  <div className="age-stepper">
+                    <button type="button" className="stepper-btn" onClick={() => setPlayer2({ ...player2, age: Math.max(3, player2.age - 1) })} aria-label="Decrease age">−</button>
+                    <span className="stepper-val">Age {player2.age}</span>
+                    <button type="button" className="stepper-btn" onClick={() => setPlayer2({ ...player2, age: Math.min(10, player2.age + 1) })} aria-label="Increase age">+</button>
                   </div>
                 </div>
               </div>

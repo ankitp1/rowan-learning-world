@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { awardStars } from '../core/engine';
-import { sfx, speak, stopSpeaking } from '../core/speech';
+import { sfx, speak, speakThemeEncouragement, stopSpeaking } from '../core/speech';
 import type { MiniAppProps, Theme } from '../core/types';
 import { Confetti } from '../ui/Art';
 import { GameShell } from '../ui/GameShell';
@@ -126,8 +126,8 @@ export default function TicTacToe({ profile, theme, onExit }: MiniAppProps) {
           if (botWin) {
             sfx.soft();
             setScores(([s1, s2]) => [s1, s2 + 1]);
-            const enc = theme.encouragements[Math.floor(Math.random() * theme.encouragements.length)];
-            void speak(`I got three in a row! ${enc}`);
+            const encIdx = Math.floor(Math.random() * (theme.encouragements?.length || 1));
+            void speakThemeEncouragement(theme, encIdx);
           } else if (full(botBoard)) {
             sfx.star();
             awardStars(profile.id, 1);

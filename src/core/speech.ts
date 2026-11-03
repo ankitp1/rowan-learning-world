@@ -1,12 +1,14 @@
 /**
  * Voice + sound effects.
  *
- * Supports 3 speech backends in priority order:
- * 1. Native Android TV / Chromecast TTS bridge (`window.AndroidTTS`)
- * 2. Browser Web Speech API (`window.speechSynthesis`) when voices are available
- * 3. HTML5 Audio cloud TTS stream fallback for WebViews without Web Speech API
+ * Supports 4 audio/speech layers in priority order:
+ * 1. Pre-rendered high-definition neural character audio clips (HTML5 Audio .mp3)
+ * 2. Native Android TV / Chromecast TTS bridge (`window.AndroidTTS`) with natural voice tuning
+ * 3. Browser Web Speech API (`window.speechSynthesis`) selecting natural/neural voices
+ * 4. HTML5 Audio cloud stream fallback for WebViews without Web Speech API
  */
 import { SOUND_TEXT } from '../content/phonics';
+import type { Theme } from './types';
 
 interface AndroidTTSBridge {
   isReady?: () => boolean;
@@ -26,19 +28,39 @@ export const setSpeechRate = (r: number) => { rate = r; };
 
 const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
 let recorded = new Set<string>();
-let loaded = false;
+let phonemesLoaded = false;
+let characterClips = new Map<string, string>();
+let characterAudioLoaded = false;
 let activeAudio: HTMLAudioElement | null = null;
 
 export function loadRecordedSounds() {
-  if (loaded) return;
-  loaded = true;
-  fetch('./audio/phonemes/index.json')
-    .then((r) => (r.ok ? r.json() : []))
-    .then((keys: string[]) => { recorded = new Set(keys); })
+  if (!phonemesLoaded) {
+    phonemesLoaded = true;
+    fetch('./audio/phonemes/index.json')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((keys: string[]) => { recorded = new Set(keys); })
+      .catch(() => {});
+  }
+  loadCharacterAudio();
+}
+
+export function loadCharacterAudio() {
+  if (characterAudioLoaded) return;
+  characterAudioLoaded = true;
+  fetch('./audio/characters/index.json')
+    .then((r) => (r.ok ? r.json() : {}))
+    .then((data: Record<string, string>) => {
+      characterClips = new Map(Object.entries(data));
+    })
     .catch(() => {});
 }
 
-let activeThemeVoice: { pitch: number; rate: number; kokoroVoice?: string; voiceNamePattern?: string } = { pitch: 1.1, rate: 0.9 };
+// Pre-load audio manifests on startup
+if (typeof window !== 'undefined') {
+  setTimeout(() => loadCharacterAudio(), 100);
+}
+
+let activeThemeVoice: { pitch: number; rate: number; kokoroVoice?: string; voiceNamePattern?: string } = { pitch: 1.0, rate: 0.9 };
 
 export function setThemeVoice(style: { pitch: number; rate: number; kokoroVoice?: string; voiceNamePattern?: string }) {
   activeThemeVoice = { ...style };
@@ -51,8 +73,9 @@ function pickVoice(preferredVoice?: string): SpeechSynthesisVoice | undefined {
     const match = voices.find((v) => new RegExp(target, 'i').test(v.name));
     if (match) return match;
   }
-  // Look for friendly, high quality natural speech voices
-  return voices.find((v) => /en[-_]US/i.test(v.lang) && /samantha|ava|allison|zoe|serena|tom|oliver|google us|natural/i.test(v.name))
+  // Look for friendly, high quality natural / neural speech voices
+  return voices.find((v) => /en[-_]US/i.test(v.lang) && /natural|neural|enhanced|google us|samantha|ava|allison|zoe|serena|tom|oliver|guy|christopher|brian|ryan/i.test(v.name))
+    ?? voices.find((v) => /^en/i.test(v.lang) && /natural|neural|enhanced/i.test(v.name))
     ?? voices.find((v) => /^en/i.test(v.lang));
 }
 
@@ -71,7 +94,9 @@ export function speak(text: string, opts: { rate?: number; pitch?: number; inter
     if (!clean) return resolve();
 
     const finalRate = (opts.rate ?? activeThemeVoice.rate ?? 1) * rate;
-    const finalPitch = opts.pitch ?? activeThemeVoice.pitch ?? 1.1;
+    // Bounded pitch range [0.93, 1.08] prevents robotic/metallic phase-vocoder distortion
+    const rawPitch = opts.pitch ?? activeThemeVoice.pitch ?? 1.0;
+    const finalPitch = Math.max(0.93, Math.min(1.08, rawPitch));
     const estMs = Math.min(7500, 550 + (clean.length * 95) / (finalRate || 1));
 
     // 1. Native Android TV / Chromecast TTS bridge
@@ -112,7 +137,7 @@ export function speak(text: string, opts: { rate?: number; pitch?: number; inter
         }
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${encodeURIComponent(clean.slice(0, 180))}`;
         const a = new Audio(url);
-        a.playbackRate = Math.max(0.65, Math.min(1.5, finalRate));
+        a.playbackRate = Math.max(0.75, Math.min(1.3, finalRate));
         activeAudio = a;
         let finished = false;
         const done = () => { if (!finished) { finished = true; clearTimeout(guard); resolve(); } };
@@ -130,12 +155,118 @@ export function speak(text: string, opts: { rate?: number; pitch?: number; inter
   });
 }
 
-function playClip(key: string): Promise<boolean> {
+/**
+ * Play a pre-rendered high-definition neural character voice clip.
+ * Returns true if played successfully, false if the clip wasn't available or failed.
+ */
+export function playCharacterAudio(themeId: string, clipKey: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const a = new Audio(`./audio/phonemes/${key}.mp3`);
-    a.onended = () => resolve(true);
-    a.onerror = () => resolve(false);
-    a.play().catch(() => resolve(false));
+    stopSpeaking();
+    if (typeof Audio === 'undefined' || (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent))) {
+      return resolve(false);
+    }
+    const manifestKey = `${themeId}:${clipKey}`;
+    const rel = characterClips.get(manifestKey) || `audio/characters/${themeId}/${clipKey}.mp3`;
+    const fullPath = `./${rel.replace(/^\.?\//, '')}`;
+    try {
+      const a = new Audio(fullPath);
+      activeAudio = a;
+      let finished = false;
+      const done = (ok: boolean) => {
+        if (!finished) {
+          finished = true;
+          clearTimeout(guard);
+          if (activeAudio === a) activeAudio = null;
+          resolve(ok);
+        }
+      };
+      const guard = setTimeout(() => done(false), 4500);
+      a.onended = () => done(true);
+      a.onerror = () => done(false);
+      const res = a.play();
+      if (res && typeof res.catch === 'function') {
+        res.catch(() => done(false));
+      }
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+/**
+ * Speaks character praise: plays pre-rendered neural character audio clip first;
+ * falls back to speech synthesis if audio isn't available.
+ */
+export async function speakThemePraise(theme: Theme, praiseIndex?: number): Promise<void> {
+  const praises = theme.praise || [];
+  const idx = praiseIndex !== undefined ? praiseIndex : Math.floor(Math.random() * (praises.length || 1));
+  const played = await playCharacterAudio(theme.id, `praise_${idx}`);
+  if (!played) {
+    const text = praises[idx] || 'Great job!';
+    await speak(text, {
+      pitch: theme.helper?.voiceStyle?.pitch,
+      rate: theme.helper?.voiceStyle?.rate,
+      voiceNamePattern: theme.helper?.voiceStyle?.voiceNamePattern,
+    });
+  }
+}
+
+/**
+ * Speaks character encouragement: plays pre-rendered neural character audio clip first;
+ * falls back to speech synthesis if audio isn't available.
+ */
+export async function speakThemeEncouragement(theme: Theme, encourageIndex?: number): Promise<void> {
+  const list = theme.encouragements || [];
+  const idx = encourageIndex !== undefined ? encourageIndex : Math.floor(Math.random() * (list.length || 1));
+  const played = await playCharacterAudio(theme.id, `encourage_${idx}`);
+  if (!played) {
+    const text = list[idx] || "You've got this! Let's try again.";
+    await speak(text, {
+      pitch: theme.helper?.voiceStyle?.pitch,
+      rate: theme.helper?.voiceStyle?.rate,
+      voiceNamePattern: theme.helper?.voiceStyle?.voiceNamePattern,
+    });
+  }
+}
+
+/**
+ * Speaks character greeting: plays pre-rendered neural character audio clip first;
+ * falls back to speech synthesis if audio isn't available.
+ */
+export async function speakThemeGreeting(themeId: string, childName?: string, fallbackText?: string): Promise<void> {
+  const isRowan = Boolean(childName && /^rowan$/i.test(childName.trim()));
+  const clipKey = isRowan ? 'greeting' : 'greeting_generic';
+  const played = await playCharacterAudio(themeId, clipKey);
+  if (!played && fallbackText) {
+    await speak(fallbackText);
+  }
+}
+
+/**
+ * Plays character sample audio quote (for theme picker preview or theme switch).
+ */
+export async function speakThemeSample(themeId: string, fallbackText?: string): Promise<void> {
+  const played = await playCharacterAudio(themeId, 'sample');
+  if (!played && fallbackText) {
+    await speak(fallbackText);
+  }
+}
+
+function playClip(key: string): Promise<boolean> {
+  if (typeof Audio === 'undefined' || (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent))) {
+    return Promise.resolve(false);
+  }
+  return new Promise((resolve) => {
+    try {
+      const a = new Audio(`./audio/phonemes/${key}.mp3`);
+      a.onended = () => resolve(true);
+      a.onerror = () => resolve(false);
+      const res = a.play();
+      if (res && typeof res.catch === 'function') res.catch(() => resolve(false));
+      setTimeout(() => resolve(false), 2000);
+    } catch {
+      resolve(false);
+    }
   });
 }
 
