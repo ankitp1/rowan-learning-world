@@ -1,10 +1,11 @@
 import { patchProfile, update } from '../../core/db';
-import { frontier, resetSkill, setLevel, statesOf, statusOf, STATUS_LABEL } from '../../core/engine';
+import { applyAgeCalibration, defaultStagesForAge, frontier, resetSkill, setLevel, statesOf, statusOf, STATUS_LABEL } from '../../core/engine';
 import { APPS } from '../../core/registry';
 import { ladder, skillsOf } from '../../core/skills';
 import { speak } from '../../core/speech';
 import { THEMES } from '../../core/themes';
-import type { HintMode, Profile, Subject } from '../../core/types';
+import type { HintMode, MathStage, Profile, ReadingStage, Subject } from '../../core/types';
+import { AgeStageFields } from '../../ui/AgeOnboarding';
 
 const SUBJECTS: { key: Subject; label: string }[] = [{ key: 'reading', label: 'Reading' }, { key: 'math', label: 'Math' }];
 
@@ -65,8 +66,35 @@ export default function Controls({ profile, onPlacement }: { profile: Profile; o
     d.playtime[profile.id][day] = Math.max(0, cur - 15 * 60_000);
   });
 
+  const curAge = profile.age ?? 5;
+  const curDefs = defaultStagesForAge(curAge);
+  const curReading = profile.readingStage ?? curDefs.readingStage;
+  const curMath = profile.mathStage ?? curDefs.mathStage;
+
   return (
     <div className="controls">
+      <section className="ctl">
+        <h3>Age & Learning Stage</h3>
+        <p className="small">
+          Pick {profile.name}'s age and readiness to automatically calibrate starting questions, puzzle difficulty, and whether basic phonics or counting games are needed.
+        </p>
+        <AgeStageFields
+          age={curAge}
+          readingStage={curReading}
+          mathStage={curMath}
+          onAgeChange={(nextAge) => {
+            const defs = defaultStagesForAge(nextAge);
+            applyAgeCalibration(profile.id, { age: nextAge, readingStage: defs.readingStage, mathStage: defs.mathStage, markPlacementDone: true });
+          }}
+          onReadingChange={(nextStage: ReadingStage) => {
+            applyAgeCalibration(profile.id, { age: curAge, readingStage: nextStage, mathStage: curMath, markPlacementDone: true });
+          }}
+          onMathChange={(nextStage: MathStage) => {
+            applyAgeCalibration(profile.id, { age: curAge, readingStage: curReading, mathStage: nextStage, markPlacementDone: true });
+          }}
+        />
+      </section>
+
       <section className="ctl">
         <h3>Placement</h3>
         <p className="small">{profile.placementDone ? 'Done. You can run the Treasure Hunt again any time, for example every few months.' : 'Not run yet.'}</p>

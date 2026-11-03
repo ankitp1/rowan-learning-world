@@ -129,8 +129,34 @@ html.legacy-device .ttt-cell {
   width: 104px;
   height: 104px;
   margin: 4px;
-  font-size: 64px;
+  padding: 0;
+  line-height: 1;
+  overflow: hidden;
+  font-size: 56px;
   background: #fff8e7;
+}
+html.legacy-device .code-history {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  -webkit-justify-content: center;
+  justify-content: center;
+  max-width: 860px;
+}
+html.legacy-device .code-history .code-row {
+  width: 260px;
+  margin: 4px;
+}
+html.legacy-device .stage-grid {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+}
+html.legacy-device .stage-card {
+  width: 210px;
+  margin: 4px;
 }
 html.legacy-device .keypad {
   display: -webkit-flex;

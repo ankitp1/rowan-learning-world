@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { awardStars } from '../core/engine';
 import { sfx, speak, stopSpeaking } from '../core/speech';
 import type { MiniAppProps, Theme } from '../core/types';
@@ -28,6 +28,12 @@ function Game({ level, theme, onWin, onNext, onExit }: {
   const [help, setHelp] = useState(0);
   const [nope, setNope] = useState<number | null>(null);
   const [bubble, setBubble] = useState(`Crack the code! It has ${spec.len} gems. ${spec.repeats ? 'A gem can be used more than once.' : 'Every gem is different.'}`);
+  const historyRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = historyRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [history.length]);
 
   const put = (g: number) => {
     const i = guess.findIndex((x) => x === null);
@@ -88,9 +94,11 @@ function Game({ level, theme, onWin, onNext, onExit }: {
         <span className="vault-emoji">{theme.container.emoji}</span>
         {Array.from({ length: spec.len }, (_, i) => <span key={i} className="gem secret">{status === 'play' ? '?' : <Gem i={secret[i]} />}</span>)}
       </div>
-      <div className="code-history" aria-label="your guesses">
+      <div ref={historyRef} className="code-history" aria-label="your guesses">
         {history.map((h, i) => (
-          <div key={i} className="code-row"><b>{i + 1}</b>{h.guess.map((g, k) => <Gem key={k} i={g} />)}<Feedback exact={h.exact} near={h.near} len={spec.len} /></div>
+          <div key={i} className="code-row" tabIndex={0} aria-label={`Guess ${i + 1}: ${h.exact} right spot, ${h.near} wrong spot`}>
+            <b>{i + 1}</b>{h.guess.map((g, k) => <Gem key={k} i={g} />)}<Feedback exact={h.exact} near={h.near} len={spec.len} />
+          </div>
         ))}
       </div>
       {status === 'play' && (

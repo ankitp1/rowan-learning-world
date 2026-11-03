@@ -396,8 +396,8 @@ input, select { font: inherit; padding: 10px 14px; border-radius: 16px; border: 
 .chip.got { background: var(--primary); color: #1a1a1a; } .chip.next { outline: 4px solid #fff; }
 
 /* ---------- tic-tac-toe ---------- */
-.ttt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: min(86vw, 52vh); aspect-ratio: 1; background: var(--panel); padding: 14px; border: 3px solid rgba(255,255,255,.35); border-radius: 36px; }
-.ttt-cell { background: var(--gloss), linear-gradient(180deg, #fff, var(--card)); border: 3px solid #fff; border-radius: 26px; font-size: clamp(48px, 12vw, 96px); min-height: 0; box-shadow: 0 6px 0 rgba(0,0,0,.2); transition: transform .16s var(--spring); }
+.ttt-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 12px; width: min(82vw, 52vh); height: min(82vw, 52vh); aspect-ratio: 1; background: var(--panel); padding: 14px; border: 3px solid rgba(255,255,255,.35); border-radius: 36px; }
+.ttt-cell { width: 100%; height: 100%; min-width: 0; min-height: 0; padding: 0; line-height: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--gloss), linear-gradient(180deg, #fff, var(--card)); border: 3px solid #fff; border-radius: 26px; font-size: min(9vw, 10vh, 64px); box-shadow: 0 6px 0 rgba(0,0,0,.2); transition: transform .16s var(--spring); }
 .ttt-cell:hover { transform: scale(1.04); }
 .menu { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
 
@@ -489,10 +489,12 @@ table.skills { width: 100%; border-collapse: collapse; font-size: 16px; } table.
 .gem.secret { background: rgba(0,0,0,.35); color: #fff; font-weight: 700; } .gem.dim { opacity: .3; }
 .vault { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 3px solid rgba(255,255,255,.35); border-radius: 30px; padding: 8px 22px; }
 .vault-emoji { font-size: 54px; }
-.code-history { display: flex; flex-direction: column; gap: 8px; max-height: 32vh; overflow: auto; width: 100%; max-width: 560px; }
-.code-row { display: flex; align-items: center; gap: 10px; justify-content: center; background: var(--panel); border-radius: 22px; padding: 6px 14px; }
-.code-row b { width: 24px; text-align: center; }
-.code-row.current { background: none; }
+.code-history { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 12px; max-height: 36vh; overflow-y: auto; width: 100%; max-width: 880px; padding: 4px; scroll-behavior: smooth; }
+.code-history .gem { width: 38px; height: 38px; font-size: 19px; }
+.code-row { display: flex; align-items: center; gap: 8px; justify-content: center; background: var(--panel); border-radius: 20px; padding: 5px 10px; }
+.code-row:focus-visible { outline: 4px solid var(--primary); outline-offset: 2px; }
+.code-row b { width: 22px; text-align: center; font-size: 16px; }
+.code-row.current { background: none; gap: 10px; padding: 6px 14px; }
 .fb { display: inline-flex; gap: 5px; margin-left: 8px; } .fb i { width: 16px; height: 16px; border-radius: 50%; border: 3px solid rgba(255,255,255,.35); display: inline-block; }
 .fb i.ex { background: #6fe08a; border-color: #fff; } .fb i.nr { border-color: #ffd23f; background: transparent; }
 .slot-btn { position: relative; min-width: 0; min-height: 0; padding: 4px; border-radius: 50%; } .slot-btn .lock { position: absolute; right: -6px; bottom: -6px; font-size: 20px; }
@@ -538,3 +540,18 @@ table.skills { width: 100%; border-collapse: collapse; font-size: 16px; } table.
 .group-visual small { display: block; text-align: center; font-size: 24px; font-weight: 700; opacity: .9; }
 .group-visual.plural .ce { font-size: 80px; }
 .group-visual b { font-size: 56px; }
+
+/* ---------- age & stage onboarding ---------- */
+.age-onboarding-fields { display: flex; flex-direction: column; gap: 12px; width: 100%; margin: 8px 0; text-align: left; }
+.age-sec { display: flex; flex-direction: column; gap: 6px; }
+.age-label { font-weight: 700; font-size: 17px; display: block; text-align: center; }
+.age-pick { justify-content: center; }
+.age-btn { min-width: 68px; min-height: 48px; font-size: 18px; font-weight: 700; padding: 6px 14px; }
+.stage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; width: 100%; }
+.stage-card { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; text-align: left; padding: 10px 14px; min-height: 68px; border-radius: 18px; border: 3px solid rgba(0,0,0,.12); background: rgba(255,255,255,.85); color: var(--text); box-shadow: 0 4px 0 rgba(0,0,0,.1); transition: transform .14s var(--spring); }
+.stage-card b { font-size: 16px; line-height: 1.2; }
+.stage-card small { font-size: 13px; line-height: 1.25; opacity: .82; font-weight: 500; }
+.stage-card.on { background: var(--gloss), var(--primary); color: #1d1500; border-color: #1d1500; transform: translateY(-2px); box-shadow: 0 5px 0 rgba(0,0,0,.22); }
+.age-modal { max-width: 760px; max-height: 92vh; overflow-y: auto; }
+.age-inline-card { max-width: 760px; width: 100%; padding: 16px 20px; }
+.card.form { max-width: 740px; max-height: 88vh; overflow-y: auto; }

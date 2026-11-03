@@ -5,9 +5,9 @@
  * in-session tracker) plus thin helpers that write to the db. Games never touch
  * mastery directly: they log attempts, and the engine does the rest.
  */
-import { getDB, patchProfile, todayKey, update } from './db';
+import { getDB, patchProfile, setGameLevel, todayKey, update } from './db';
 import { ladder, ladderIndex, skillById } from './skills';
-import type { Attempt, MiniApp, Profile, RecentAttempt, SkillState, SkillStatus, Subject } from './types';
+import type { Attempt, MathStage, MiniApp, Profile, ReadingStage, RecentAttempt, SkillState, SkillStatus, Subject } from './types';
 
 export const DAY = 86_400_000;
 export const REVIEW_DAYS = [3, 7, 21];
@@ -212,10 +212,12 @@ export class Placement {
   total = 0;
   done = false;
 
-  constructor(readonly subject: Subject) {
+  constructor(readonly subject: Subject, startRung?: number) {
     this.rungs = ladder(subject);
     this.hi = this.rungs.length - 1;
-    this.mid = Math.floor((this.lo + this.hi) / 2);
+    this.mid = startRung !== undefined
+      ? Math.max(0, Math.min(this.hi, startRung))
+      : Math.floor((this.lo + this.hi) / 2);
   }
   get skill() { return this.rungs[this.mid]; }
 
@@ -253,6 +255,105 @@ export function applyPlacement(profileId: string, subject: Subject, level: numbe
   });
 }
 
+/* ---------------- age & readiness calibration ---------------- */
+
+export const READING_STAGES: { id: ReadingStage; label: string; desc: string; startRung: number; disablePhonics: boolean }[] = [
+  {
+    id: 'beginner',
+    label: 'Beginning Reader',
+    desc: 'Learning letter sounds & short 3-letter words (cat, dog, sun)',
+    startRung: 0,
+    disablePhonics: false,
+  },
+  {
+    id: 'phonics',
+    label: 'Sounding Out Words',
+    desc: 'Practicing phonics, blends (sh, ch, th) & 4-letter words',
+    startRung: 5,
+    disablePhonics: false,
+  },
+  {
+    id: 'fluent',
+    label: 'Already Reading!',
+    desc: 'Skips phonics games — focuses on stories, written clues & directions',
+    startRung: 11,
+    disablePhonics: true,
+  },
+];
+
+export const MATH_STAGES: { id: MathStage; label: string; desc: string; startRung: number; disableCounting: boolean }[] = [
+  {
+    id: 'counting',
+    label: 'Counting & Comparing',
+    desc: 'Counting up to 10 & 20, and spotting more / fewer',
+    startRung: 0,
+    disableCounting: false,
+  },
+  {
+    id: 'add10',
+    label: 'Adding & Subtracting to 10',
+    desc: 'Putting groups together and taking away within 10',
+    startRung: 3,
+    disableCounting: false,
+  },
+  {
+    id: 'advanced20',
+    label: 'Advanced Math (to 20)',
+    desc: 'Skips basic counting — focuses on Making 10 & Add/Subtract to 20',
+    startRung: 7,
+    disableCounting: true,
+  },
+];
+
+export function defaultStagesForAge(age: number): { readingStage: ReadingStage; mathStage: MathStage } {
+  if (age <= 4) return { readingStage: 'beginner', mathStage: 'counting' };
+  if (age === 5) return { readingStage: 'phonics', mathStage: 'add10' };
+  return { readingStage: 'fluent', mathStage: 'advanced20' };
+}
+
+/**
+ * Calibrate starting skill rungs, enabled/disabled apps, and brain-game levels
+ * based on the child's age and parent-selected reading/math stages.
+ */
+export function applyAgeCalibration(
+  profileId: string,
+  opts: { age: number; readingStage: ReadingStage; mathStage: MathStage; markPlacementDone?: boolean },
+) {
+  const rStage = READING_STAGES.find((x) => x.id === opts.readingStage) ?? READING_STAGES[0];
+  const mStage = MATH_STAGES.find((x) => x.id === opts.mathStage) ?? MATH_STAGES[0];
+
+  // Seed reading and math ladder levels + mark earlier rungs as placed
+  applyPlacement(profileId, 'reading', rStage.startRung);
+  applyPlacement(profileId, 'math', mStage.startRung);
+
+  // Calibrate initial difficulty level of brain/logic/maze games based on age
+  const gameTier = opts.age <= 4 ? 0 : opts.age === 5 ? 1 : opts.age === 6 ? 2 : 3;
+  for (const prefix of ['rlw.maze', 'rlw.code', 'rlw.hanoi', 'rlw.mem', 'rlw.echo', 'rlw.miss']) {
+    setGameLevel(`${prefix}.${profileId}`, gameTier);
+  }
+
+  const phonicsApps = ['word-builder', 'blend-plank'];
+  const countingApps = ['coin-count'];
+
+  patchProfile(profileId, (p) => {
+    p.age = opts.age;
+    p.readingStage = opts.readingStage;
+    p.mathStage = opts.mathStage;
+    if (opts.markPlacementDone) p.placementDone = true;
+
+    const disabled = new Set(p.settings.disabledApps);
+    for (const id of phonicsApps) {
+      if (rStage.disablePhonics) disabled.add(id);
+      else disabled.delete(id);
+    }
+    for (const id of countingApps) {
+      if (mStage.disableCounting) disabled.add(id);
+      else disabled.delete(id);
+    }
+    p.settings.disabledApps = [...disabled];
+  });
+}
+
 export function setLevel(profileId: string, subject: Subject, level: number) {
   patchProfile(profileId, (p) => { p.levels[subject] = level; });
 }
@@ -280,10 +381,12 @@ export function buildMission(profile: Profile, apps: MiniApp[], rng: () => numbe
   const extras = enabled.filter(isExtra);
   const pickFor = (subject: Subject, avoid: string[]): MiniApp | undefined => {
     const pool = enabled.filter((a) => a.subject === subject && !a.place && a.skills.length && !isExtra(a));
-    if (!pool.length) return undefined;
+    const fallbackExtras = subject === 'reading' ? extras.filter((a) => !avoid.includes(a.id)) : [];
+    if (!pool.length) return fallbackExtras.length ? fallbackExtras[Math.floor(rng() * fallbackExtras.length)] : undefined;
     const f = frontier(profile, subject, states);
     const fit = pool.filter((a) => a.skills.includes(f.id));
     const cands = (fit.length ? fit : pool).filter((a) => !avoid.includes(a.id));
+    if (!cands.length && fallbackExtras.length) return fallbackExtras[Math.floor(rng() * fallbackExtras.length)];
     const list = cands.length ? cands : fit.length ? fit : pool;
     return list[Math.floor(rng() * list.length)];
   };

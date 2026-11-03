@@ -47,6 +47,8 @@ export interface SkillState {
 }
 
 export type HintMode = 'full' | 'limited' | 'nudge-only';
+export type ReadingStage = 'beginner' | 'phonics' | 'fluent';
+export type MathStage = 'counting' | 'add10' | 'advanced20';
 
 export interface ProfileSettings {
   dailyMinutes: number; // 0 = unlimited
@@ -63,6 +65,12 @@ export interface Profile {
   name: string;
   avatar: string;
   themeId: string;
+  /** Child's age in years (3-8+), used to calibrate starting difficulty and active games. */
+  age?: number;
+  /** Reading readiness stage chosen during parent onboarding / controls. */
+  readingStage?: ReadingStage;
+  /** Math readiness stage chosen during parent onboarding / controls. */
+  mathStage?: MathStage;
   levels: Partial<Record<Subject, number>>;
   /** Parent cap: highest ladder index the engine may serve, per subject. */
   lockLevels?: Partial<Record<Subject, number>>;

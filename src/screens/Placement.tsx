@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
 import { avoidKey, makeQuestion } from '../content/generators';
-import { Placement, applyPlacement } from '../core/engine';
+import { Placement, applyAgeCalibration, applyPlacement, defaultStagesForAge } from '../core/engine';
 import { patchProfile } from '../core/db';
 import { speak } from '../core/speech';
-import type { Profile, Question, Subject, Theme } from '../core/types';
+import type { MathStage, Profile, Question, ReadingStage, Subject, Theme } from '../core/types';
+import { AgeStageFields } from '../ui/AgeOnboarding';
 import QuestionCard, { type AnswerResult } from '../ui/QuestionCard';
 
 const LABEL: Record<string, string> = { reading: 'Reading', math: 'Math' };
@@ -22,8 +23,34 @@ export default function PlacementScreen({ profile, theme, subjects = ['reading',
   const [count, setCount] = useState(0);
   const [found, setFound] = useState<Record<string, string>>({});
 
+  const initAge = profile.age ?? 5;
+  const initDefs = defaultStagesForAge(initAge);
+  const [age, setAge] = useState<number>(initAge);
+  const [readingStage, setReadingStage] = useState<ReadingStage>(profile.readingStage ?? initDefs.readingStage);
+  const [mathStage, setMathStage] = useState<MathStage>(profile.mathStage ?? initDefs.mathStage);
+  const [showSetup, setShowSetup] = useState(false);
+
+  const handleAgeChange = (nextAge: number) => {
+    setAge(nextAge);
+    const defs = defaultStagesForAge(nextAge);
+    setReadingStage(defs.readingStage);
+    setMathStage(defs.mathStage);
+    applyAgeCalibration(profile.id, { age: nextAge, readingStage: defs.readingStage, mathStage: defs.mathStage });
+  };
+
+  const handleReadingChange = (nextStage: ReadingStage) => {
+    setReadingStage(nextStage);
+    applyAgeCalibration(profile.id, { age, readingStage: nextStage, mathStage });
+  };
+
+  const handleMathChange = (nextStage: MathStage) => {
+    setMathStage(nextStage);
+    applyAgeCalibration(profile.id, { age, readingStage, mathStage: nextStage });
+  };
+
   const startSubject = (i: number) => {
-    runner.current = new Placement(subjects[i]);
+    const startRung = profile.levels[subjects[i]];
+    runner.current = new Placement(subjects[i], startRung);
     avoid.current = [];
     setCount(0);
     setSi(i);
@@ -56,8 +83,32 @@ export default function PlacementScreen({ profile, theme, subjects = ['reading',
         <div className="big-emoji">🗺️</div>
         <h1>The Treasure Hunt!</h1>
         <p>{theme.helper.name} found a treasure map. Answer a few questions to follow it. There are no wrong answers, just keep trying!</p>
+        {showSetup && (
+          <div className="card age-inline-card">
+            <AgeStageFields
+              age={age}
+              readingStage={readingStage}
+              mathStage={mathStage}
+              onAgeChange={handleAgeChange}
+              onReadingChange={handleReadingChange}
+              onMathChange={handleMathChange}
+            />
+          </div>
+        )}
         <div className="row">
           <button className="btn primary big" data-autofocus onClick={() => startSubject(0)}>Start!</button>
+          <button
+            className="btn"
+            onClick={() => {
+              applyAgeCalibration(profile.id, { age, readingStage, mathStage, markPlacementDone: true });
+              onDone();
+            }}
+          >
+            ⚡ Use Age {age === 8 ? '8+' : age} Level & Skip Hunt
+          </button>
+          <button className="btn" onClick={() => setShowSetup((s) => !s)}>
+            🎯 {showSetup ? 'Hide Age Setup' : `Adjust Age (${age === 8 ? '8+' : `${age} yrs`})`}
+          </button>
           <button className="btn" onClick={onExit}>Later</button>
         </div>
       </div>

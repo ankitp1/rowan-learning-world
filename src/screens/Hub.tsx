@@ -4,6 +4,7 @@ import { patchProfile } from '../core/db';
 import { APPS } from '../core/registry';
 import { THEMES, themeById } from '../core/themes';
 import type { MiniApp, Profile, Subject, Theme } from '../core/types';
+import { AgeOnboardingModal } from '../ui/AgeOnboarding';
 import { HelperAvatar, IslandBase, MapTrail } from '../ui/Art';
 
 const TONE: Record<string, Record<string, string>> = {
@@ -49,6 +50,7 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
   onIsland: (k: IslandKey) => void; onMission: () => void; onSwitch: () => void; onGrownUps: () => void;
 }) {
   const [book, setBook] = useState(false);
+  const [ageModal, setAgeModal] = useState(false);
   const allowed = THEMES.filter((t) => !profile.settings.allowedThemes.length || profile.settings.allowedThemes.includes(t.id));
   const cycleTheme = () => {
     const i = allowed.findIndex((t) => t.id === theme.id);
@@ -70,6 +72,7 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
         <button className="chip-btn" onClick={onSwitch}>{profile.avatar} {profile.name}</button>
         <span className="stars-count" aria-label={`${profile.stars} stars`}>⭐ {profile.stars}</span>
         <button className="chip-btn" onClick={() => setBook(true)}>📖 Stickers</button>
+        <button className="chip-btn" onClick={() => setAgeModal(true)}>🎯 Age {profile.age ? (profile.age === 8 ? '8+' : profile.age) : 'Level'}</button>
         {allowed.length > 1 && <button className="chip-btn" onClick={cycleTheme}>{theme.emoji} Change look</button>}
         <button className="chip-btn lock" onClick={onGrownUps} aria-label="Grown-ups">🔒</button>
       </header>
@@ -98,6 +101,7 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
         </div>
       </div>
       {book && <StickerBook profile={profile} theme={theme} onClose={() => setBook(false)} />}
+      {ageModal && <AgeOnboardingModal profile={profile} onClose={() => setAgeModal(false)} />}
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DAY, Placement, REVIEW_DAYS, Tracker, applyAttempt, baseDifficulty, blankState, buildMission, computeMastery,
-  frontier, pickSkill, statusOf,
+  DAY, Placement, REVIEW_DAYS, Tracker, applyAgeCalibration, applyAttempt, baseDifficulty, blankState, buildMission, computeMastery,
+  defaultStagesForAge, frontier, pickSkill, statusOf,
 } from '../core/engine';
+import { createProfile, getDB, getGameLevel, resetAll } from '../core/db';
 import { ladder } from '../core/skills';
 import { APPS } from '../core/registry';
 import type { Attempt, Profile, SkillState } from '../core/types';
@@ -174,5 +175,30 @@ describe('missions', () => {
     const off = APPS.filter((a) => a.subject === 'games').map((a) => a.id);
     const plan = buildMission(profile({ settings: { ...profile().settings, disabledApps: off } }), APPS, mulberry(2));
     expect(plan.every((id) => !off.includes(id))).toBe(true);
+  });
+});
+
+describe('age & readiness calibration', () => {
+  it('calibrates a 6-year-old fluent reader to skip phonics & basic counting and start at advanced math', () => {
+    resetAll();
+    const p = createProfile('Maya', '👧', 'pups');
+    const defs = defaultStagesForAge(6);
+    expect(defs).toEqual({ readingStage: 'fluent', mathStage: 'advanced20' });
+    applyAgeCalibration(p.id, { age: 6, ...defs, markPlacementDone: true });
+    const updated = getDB().profiles.find((x) => x.id === p.id)!;
+    expect(updated.age).toBe(6);
+    expect(updated.readingStage).toBe('fluent');
+    expect(updated.mathStage).toBe('advanced20');
+    expect(updated.settings.disabledApps).toContain('word-builder');
+    expect(updated.settings.disabledApps).toContain('blend-plank');
+    expect(updated.settings.disabledApps).toContain('coin-count');
+    expect(updated.levels.reading).toBeGreaterThanOrEqual(11);
+    expect(updated.levels.math).toBeGreaterThanOrEqual(7);
+    expect(getGameLevel(`rlw.code.${p.id}`)).toBe(2);
+    const plan = buildMission(updated, APPS, mulberry(9));
+    expect(plan).toHaveLength(5);
+    expect(plan).not.toContain('word-builder');
+    expect(plan).not.toContain('blend-plank');
+    expect(plan).not.toContain('coin-count');
   });
 });

@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { createProfile, useDB } from '../core/db';
+import { applyAgeCalibration, defaultStagesForAge } from '../core/engine';
 import { THEMES } from '../core/themes';
+import type { MathStage, ReadingStage } from '../core/types';
+import { AgeStageFields } from '../ui/AgeOnboarding';
 
 export const AVATARS = ['🧒', '👦', '👧', '🧑‍🚀', '🦸', '🦊', '🐯', '🐼', '🦁', '🐲', '🦄', '🐵'];
 
@@ -8,13 +11,26 @@ export function ProfileForm({ onCreated, onCancel }: { onCreated: (id: string) =
   const [name, setName] = useState('');
   const [avatar, setAvatar] = useState(AVATARS[0]);
   const [themeId, setThemeId] = useState(THEMES[0].id);
+  const [age, setAge] = useState(5);
+  const [readingStage, setReadingStage] = useState<ReadingStage>('phonics');
+  const [mathStage, setMathStage] = useState<MathStage>('add10');
+
+  const handleAgeChange = (nextAge: number) => {
+    setAge(nextAge);
+    const defs = defaultStagesForAge(nextAge);
+    setReadingStage(defs.readingStage);
+    setMathStage(defs.mathStage);
+  };
+
   return (
     <form
       className="card form"
       onSubmit={(e) => {
         e.preventDefault();
         if (!name.trim()) return;
-        onCreated(createProfile(name.trim(), avatar, themeId).id);
+        const p = createProfile(name.trim(), avatar, themeId);
+        applyAgeCalibration(p.id, { age, readingStage, mathStage });
+        onCreated(p.id);
       }}
     >
       <h2>New player</h2>
@@ -31,6 +47,14 @@ export function ProfileForm({ onCreated, onCancel }: { onCreated: (id: string) =
           </button>
         ))}
       </div>
+      <AgeStageFields
+        age={age}
+        readingStage={readingStage}
+        mathStage={mathStage}
+        onAgeChange={handleAgeChange}
+        onReadingChange={setReadingStage}
+        onMathChange={setMathStage}
+      />
       <div className="row">
         <button className="btn primary" type="submit" disabled={!name.trim()}>Let's go!</button>
         {onCancel && <button className="btn" type="button" onClick={onCancel}>Cancel</button>}
