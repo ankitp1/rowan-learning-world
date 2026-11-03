@@ -32,6 +32,7 @@ function RoundInner({ appId, props, children }: { appId: string; props: MiniAppP
   const [proactive, setProactive] = useState(false);
   const [index, setIndex] = useState(0);
   const [right, setRight] = useState(0);
+  const [starsWon, setStarsWon] = useState(0);
   const [done, setDone] = useState(false);
   const reported = useRef(false);
 
@@ -42,7 +43,12 @@ function RoundInner({ appId, props, children }: { appId: string; props: MiniAppP
     });
     tracker.current.record(r.correct, r.ms);
     avoid.current = [...avoid.current.slice(-6), avoidKey(q)];
-    if (r.correct) { setRight((n) => n + 1); awardStars(profile.id, 1); }
+    if (r.correct) {
+      const earned = r.starsEarned ?? 1;
+      setRight((n) => n + 1);
+      setStarsWon((s) => s + earned);
+      awardStars(profile.id, earned);
+    }
     if (index + 1 >= total) { setDone(true); return; }
     setProactive(tracker.current.proactiveHint);
     setIndex(index + 1);
@@ -73,7 +79,8 @@ function RoundInner({ appId, props, children }: { appId: string; props: MiniAppP
           <Confetti />
           <div className="big-emoji pop">🎉</div>
           <h1>{right} of {total}!</h1>
-          <div className="stars">{Array.from({ length: right }, (_, i) => <span key={i}>⭐</span>)}</div>
+          <div className="stars">{Array.from({ length: Math.min(starsWon || right, 15) }, (_, i) => <span key={i}>⭐</span>)}</div>
+          {starsWon > right && <p className="speed-summary">⚡ +{starsWon - right} Speed Bonus Stars!</p>}
           {!onComplete && (
             <div className="row">
               <button className="btn primary" data-autofocus onClick={() => window.dispatchEvent(new CustomEvent('round:again'))}>Play again</button>

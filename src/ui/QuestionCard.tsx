@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { fill } from '../content/generators';
 import { focusFirst } from '../core/nav';
 import { sfx, soundOut, speak, speakSound, stopSpeaking } from '../core/speech';
-import type { Choice, HintMode, Profile, Question, Theme } from '../core/types';
+import type { Choice, HintMode, Profile, Question, Theme, TimerMode } from '../core/types';
+import { isVoiceSupported, registerQuestionVoiceHandler, toggleVoiceListening, useVoice } from '../core/voice';
 import { HelperAvatar } from './Art';
 import { BridgeVisual, MathVisual, ShapeSvg, WordTiles, countSeq } from './Visuals';
 
@@ -13,6 +14,26 @@ export interface AnswerResult {
   hintsUsed: number;
   tags: string[];
   ms: number;
+  starsEarned?: number;
+}
+
+export function timerSecondsForQuestion(q: Question, mode?: TimerMode): number {
+  if (!mode || mode === 'off') return 0;
+  const d = q.support ?? 1;
+  if (mode === 'relaxed') return d === 0 ? 35 : d === 1 ? 30 : 25;
+  if (mode === 'standard') return d === 0 ? 24 : d === 1 ? 18 : 14;
+  if (mode === 'fast') return d === 0 ? 16 : d === 1 ? 12 : 9;
+  // 'auto': scales automatically with difficulty level
+  return d === 0 ? 30 : d === 1 ? 22 : 15;
+}
+
+export function computeSpeedStars(ms: number, limitSec: number, cleanFirstTry: boolean): number {
+  if (!cleanFirstTry) return 1;
+  if (limitSec <= 0) return 1;
+  const ratio = 1 - ms / (limitSec * 1000);
+  if (ratio >= 0.5) return 3;
+  if (ratio >= 0.2) return 2;
+  return 1;
 }
 
 export const MAX_HINTS: Record<HintMode, number> = { full: 3, limited: 2, 'nudge-only': 1 };
@@ -66,8 +87,21 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
   const [soundIdx, setSoundIdx] = useState<number | undefined>();
   const [joined, setJoined] = useState(false);
   const [lastPick, setLastPick] = useState<number | null>(null);
+  const [bonusStars, setBonusStars] = useState<number | null>(null);
   const cancel = useRef<() => void>(() => {});
   const alive = useRef(true);
+  const voice = useVoice();
+
+  const limitSec = placement ? 0 : timerSecondsForQuestion(q, profile.settings.timerMode);
+  const [elapsedMs, setElapsedMs] = useState(0);
+
+  useEffect(() => {
+    if (limitSec <= 0 || done) return;
+    const iv = setInterval(() => {
+      setElapsedMs(Date.now() - t0.current);
+    }, 200);
+    return () => clearInterval(iv);
+  }, [limitSec, done]);
 
   // Re-arm on mount: React StrictMode runs the cleanup once in dev, which must not leave this false.
   useEffect(() => { alive.current = true; return () => { alive.current = false; cancel.current(); stopSpeaking(); }; }, []);
@@ -137,17 +171,25 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
       if (q.kind === 'word') playBlend();
       else if (countSeq(q).length) void runCount();
       else void speak(fill(h.text, theme));
-    } else void speak(fill(h.say ?? h.text, theme));
+    } else {
+      void speak(fill(h.say ?? h.text, theme));
+      if (lvl === 1 && (q.kind === 'add' || q.kind === 'sub' || q.kind === 'make10' || q.kind === 'count')) {
+        void runCount();
+      }
+    }
   }
 
   async function finish(correct: boolean, given: string, tags: string[]) {
     const ms = Date.now() - t0.current;
-    const res = { correct, given, expected: q.answer, hintsUsed: level, tags, ms };
+    const starsEarned = correct ? computeSpeedStars(ms, limitSec, level === 0) : 0;
+    if (correct && limitSec > 0 && starsEarned > 1) setBonusStars(starsEarned);
+    const res = { correct, given, expected: q.answer, hintsUsed: level, tags, ms, starsEarned };
     if (placement) { sfx.tap(); setBubble('Thanks! Next one!'); await sleep(500); if (alive.current) onResult(res); return; }
     sfx.good();
     const praise = theme.praise[Math.floor(Math.random() * theme.praise.length)];
     const explain = level > 0 || !correct;
-    setBubble(explain ? fill(q.explain.text, theme) : praise);
+    const starNote = limitSec > 0 && starsEarned > 1 ? ` ⚡ +${starsEarned} Stars Speed Bonus!` : '';
+    setBubble((explain ? fill(q.explain.text, theme) : praise) + starNote);
     cancel.current();
     if (explain) { await speak(praise); await speak(fill(q.explain.say ?? q.explain.text, theme)); await sleep(500); }
     else { await speak(praise); await sleep(350); }
@@ -226,11 +268,67 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
     }
     if (q.kind === 'follow') return null;
     if (variant === 'bridge' && q.kind === 'make10') return <BridgeVisual a={q.a ?? 0} gap={q.b ?? 0} pick={reveal ? (q.b ?? 0) : lastPick} />;
-    return <MathVisual q={q} theme={theme} hi={hi} />;
+    return <MathVisual q={q} theme={theme} hi={hi} hintLevel={level} />;
   })();
+
+  // Register voice command & spoken-answer matcher for this question
+  useEffect(() => {
+    return registerQuestionVoiceHandler({
+      onRepeat: () => {
+        if (variant === 'plank' || q.kind === 'word') playBlend();
+        else if (q.kind === 'sight' && q.word) void speak(q.word);
+        else void speak(fill(q.say ?? q.prompt, theme));
+      },
+      onHint: () => ask(),
+      onTranscript: (clean, tokens) => {
+        const active = q.choices.filter((c) => !gone.includes(c.id));
+        // Support ordinal picks: "first", "second", "third"
+        if (tokens.includes('first') && active[0]) { pick(active[0]); return true; }
+        if (tokens.includes('second') && active[1]) { pick(active[1]); return true; }
+        if (tokens.includes('third') && active[2]) { pick(active[2]); return true; }
+        if (q.kind === 'compare') {
+          if (tokens.includes('left')) { const c = active.find((x) => x.id === 'L' || x.id === '>'); if (c) { pick(c); return true; } }
+          if (tokens.includes('right')) { const c = active.find((x) => x.id === 'R' || x.id === '<'); if (c) { pick(c); return true; } }
+          if (tokens.includes('same') || tokens.includes('equal')) { const c = active.find((x) => x.id === 'S' || x.id === '='); if (c) { pick(c); return true; } }
+        }
+        // Match choice id or text against spoken tokens
+        for (const c of active) {
+          const cid = c.id.toLowerCase();
+          const ctxt = (c.text ?? '').toLowerCase();
+          if (tokens.includes(cid) || (ctxt && tokens.includes(ctxt)) || (ctxt.length >= 2 && clean.includes(ctxt))) {
+            pick(c);
+            return true;
+          }
+          // Captain's log shape matching (e.g. "big-red-star")
+          if (q.kind === 'follow') {
+            const parts = cid.split('-');
+            if (parts.every((p) => tokens.includes(p)) || parts.slice(1).every((p) => tokens.includes(p))) {
+              pick(c);
+              return true;
+            }
+          }
+        }
+        return false;
+      },
+    });
+  });
+
+  const remRatio = limitSec > 0 ? Math.max(0, 1 - elapsedMs / (limitSec * 1000)) : 0;
+  const remSec = limitSec > 0 ? Math.max(0, Math.ceil(limitSec - elapsedMs / 1000)) : 0;
+  const liveStars = computeSpeedStars(elapsedMs, limitSec, !wrong && level === 0);
 
   return (
     <div className="qcard">
+      {limitSec > 0 && (
+        <div className={`qtimer tier-${liveStars}`} aria-label={`${remSec} seconds for speed bonus`}>
+          <div className="qtimer-bar">
+            <i style={{ width: `${Math.round(remRatio * 100)}%` }} />
+          </div>
+          <span className="qtimer-lbl">
+            {bonusStars ? `⚡ +${bonusStars} ⭐ Bonus!` : remSec > 0 ? `⏱️ ${remSec}s · ${'⭐'.repeat(liveStars)}` : '⏱️ Take your time · ⭐'}
+          </span>
+        </div>
+      )}
       <Bubble theme={theme} mood={done ? 'cheer' : 'talking'} text={bubble || (placement ? 'Take your best guess. You can do it!' : `Take your time, ${profile.name}!`)} />
       <div className="prompt">
         <span>{prompt}</span>
@@ -251,7 +349,20 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
           );
         })}
       </div>
-      {!placement && maxHints > 0 && <HelperButton theme={theme} level={level} max={maxHints} onAsk={ask} />}
+      <div className="qcard-actions">
+        {!placement && maxHints > 0 && <HelperButton theme={theme} level={level} max={maxHints} onAsk={ask} />}
+        {isVoiceSupported() && (
+          <button
+            type="button"
+            className={`voice-btn${voice.status === 'listening' ? ' listening' : ''}`}
+            onClick={toggleVoiceListening}
+            aria-label={voice.status === 'listening' ? 'Stop listening' : 'Speak your answer or say a command'}
+          >
+            <span>{voice.status === 'listening' ? '🎙️ Listening...' : '🎤 Say it'}</span>
+            {voice.lastTranscript && <small className="voice-heard">"{voice.lastTranscript}"</small>}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

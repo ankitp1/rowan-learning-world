@@ -4,6 +4,7 @@ import { patchProfile } from '../core/db';
 import { APPS } from '../core/registry';
 import { THEMES, themeById } from '../core/themes';
 import type { MiniApp, Profile, Subject, Theme } from '../core/types';
+import { isVoiceSupported, toggleVoiceListening, useVoice } from '../core/voice';
 import { AgeOnboardingModal } from '../ui/AgeOnboarding';
 import { HelperAvatar, IslandBase, MapTrail } from '../ui/Art';
 
@@ -51,6 +52,7 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
 }) {
   const [book, setBook] = useState(false);
   const [ageModal, setAgeModal] = useState(false);
+  const voice = useVoice();
   const allowed = THEMES.filter((t) => !profile.settings.allowedThemes.length || profile.settings.allowedThemes.includes(t.id));
   const cycleTheme = () => {
     const i = allowed.findIndex((t) => t.id === theme.id);
@@ -73,6 +75,15 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
         <span className="stars-count" aria-label={`${profile.stars} stars`}>⭐ {profile.stars}</span>
         <button className="chip-btn" onClick={() => setBook(true)}>📖 Stickers</button>
         <button className="chip-btn" onClick={() => setAgeModal(true)}>🎯 Age {profile.age ? (profile.age === 8 ? '8+' : profile.age) : 'Level'}</button>
+        {isVoiceSupported() && (
+          <button
+            className={`chip-btn voice-top${voice.status === 'listening' ? ' listening' : ''}`}
+            onClick={toggleVoiceListening}
+            aria-label={voice.status === 'listening' ? 'Stop listening' : 'Voice command'}
+          >
+            {voice.status === 'listening' ? '🎙️ Listening...' : '🎤 Voice'}
+          </button>
+        )}
         {allowed.length > 1 && <button className="chip-btn" onClick={cycleTheme}>{theme.emoji} Change look</button>}
         <button className="chip-btn lock" onClick={onGrownUps} aria-label="Grown-ups">🔒</button>
       </header>

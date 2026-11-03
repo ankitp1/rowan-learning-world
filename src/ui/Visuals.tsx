@@ -58,45 +58,156 @@ export function countSeq(q: Question): number[] {
   }
 }
 
-export function MathVisual({ q, theme, hi }: { q: Question; theme: Theme; hi: number | null }) {
+export function MathVisual({ q, theme, hi, hintLevel = 0 }: { q: Question; theme: Theme; hi: number | null; hintLevel?: number }) {
   const e = theme.id;
   const lit = (cap: number, offset = 0) => (hi === null ? undefined : Math.max(0, Math.min(cap, hi - offset)));
   const a = q.a ?? 0;
   const b = q.b ?? 0;
+  const showCoach = hintLevel > 0;
+
   switch (q.kind) {
-    case 'count':
-      return <CoinGrid n={q.n ?? 0} themeId={e} lit={lit(q.n ?? 0)} />;
+    case 'count': {
+      const n = q.n ?? 0;
+      return (
+        <div className="math-wrap">
+          <CoinGrid n={n} themeId={e} lit={lit(n)} />
+          {showCoach && (
+            <div className="math-coach pop" role="region" aria-label="Math strategy cue">
+              <span className="coach-badge">🧠 Easy Trick</span>
+              <p>
+                {n >= 5
+                  ? `Each full row has 5! Start at 5${n >= 10 ? ', 10' : ''}${n >= 15 ? ', 15' : ''} and count the rest one by one.`
+                  : 'Touch each one as you count: 1, 2, 3...'}
+              </p>
+            </div>
+          )}
+        </div>
+      );
+    }
     case 'compare':
-      if (q.support === 2) return <div className="bignum">{a} <span>?</span> {b}</div>;
       return (
-        <div className="piles">
-          <CoinGrid n={a} themeId={e} lit={lit(a)} />
-          <span className="vs">vs</span>
-          <CoinGrid n={b} themeId={e} lit={lit(b, a)} alt />
+        <div className="math-wrap">
+          {q.support === 2 && !showCoach ? (
+            <div className="bignum">{a} <span>?</span> {b}</div>
+          ) : (
+            <div className="piles">
+              <CoinGrid n={a} themeId={e} lit={lit(a)} />
+              <span className="vs">vs</span>
+              <CoinGrid n={b} themeId={e} lit={lit(b, a)} alt />
+            </div>
+          )}
+          {showCoach && (
+            <div className="math-coach pop" role="region" aria-label="Math strategy cue">
+              <span className="coach-badge">🧠 Compare Visual</span>
+              <p>Left pile has <b>{a}</b>. Right pile has <b>{b}</b>. Look at which group has more rows!</p>
+            </div>
+          )}
         </div>
       );
-    case 'add':
-      if (q.support === 2) return <div className="bignum">{a} + {b}</div>;
-      if (q.support === 1) return <NumberLine from={a} dir={1} steps={b} hi={hi === null ? null : Math.max(0, hi - a)} />;
+    case 'add': {
+      const big = Math.max(a, b);
+      const small = Math.min(a, b);
+      const crossing10 = a < 10 && b < 10 && a + b > 10;
+      const to10 = 10 - big;
+      const rest = small - to10;
       return (
-        <div className="piles">
-          <CoinGrid n={a} themeId={e} lit={lit(a)} />
-          <span className="vs">+</span>
-          <CoinGrid n={b} themeId={e} lit={lit(b, a)} alt />
+        <div className="math-wrap">
+          {q.support === 2 && !showCoach && <div className="bignum">{a} + {b}</div>}
+          {(q.support === 1 || (showCoach && q.support === 2)) && (
+            <NumberLine from={a} dir={1} steps={b} hi={hi === null ? null : Math.max(0, hi - a)} />
+          )}
+          {(q.support === 0 || showCoach) && (
+            <div className="piles">
+              <CoinGrid n={a} themeId={e} lit={lit(a)} />
+              <span className="vs">+</span>
+              <CoinGrid n={b} themeId={e} lit={lit(b, a)} alt />
+            </div>
+          )}
+          {showCoach && (
+            <div className="math-coach pop" role="region" aria-label="Mental math strategy">
+              {crossing10 ? (
+                <>
+                  <span className="coach-badge">🧠 Make 10 First Trick!</span>
+                  <div className="coach-steps">
+                    <span className="coach-pill">1️⃣ <b>{big} + {to10} = 10</b></span>
+                    <span className="coach-arrow">→</span>
+                    <span className="coach-pill">2️⃣ <b>10 + {rest} = {hintLevel >= 3 ? a + b : '?'}</b></span>
+                  </div>
+                  <TenFrame filled={big} extra={to10} themeId={e} />
+                </>
+              ) : (
+                <>
+                  <span className="coach-badge">🧠 Count-On In Your Head!</span>
+                  <div className="coach-steps">
+                    <span className="coach-brain">🧠 Hold <b>{big}</b></span>
+                    {Array.from({ length: small }, (_, i) => {
+                      const stepVal = big + i + 1;
+                      const isLit = hi !== null && hi >= a + i + 1;
+                      return (
+                        <span key={i} className={`coach-hop${isLit ? ' lit' : ''}`}>
+                          <Collectible themeId={e} />
+                          <b>{hintLevel >= 2 || i < small - 1 ? stepVal : '?'}</b>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       );
-    case 'sub':
-      if (q.support === 2) return <div className="bignum">{a} − {b}</div>;
-      if (q.support === 1) return <NumberLine from={a} dir={-1} steps={b} hi={hi} />;
+    }
+    case 'sub': {
       return (
-        <div className="piles">
-          <CoinGrid n={a} themeId={e} gone={b} lit={lit(a - b)} />
-          <span className="thief">{theme.thief.emoji}<small>takes {b}</small></span>
+        <div className="math-wrap">
+          {q.support === 2 && !showCoach && <div className="bignum">{a} − {b}</div>}
+          {(q.support === 1 || (showCoach && q.support === 2)) && (
+            <NumberLine from={a} dir={-1} steps={b} hi={hi} />
+          )}
+          {(q.support === 0 || showCoach) && (
+            <div className="piles">
+              <CoinGrid n={a} themeId={e} gone={b} lit={lit(a - b)} />
+              <span className="thief">{theme.thief.emoji}<small>takes {b}</small></span>
+            </div>
+          )}
+          {showCoach && (
+            <div className="math-coach pop" role="region" aria-label="Subtraction mental math strategy">
+              <span className="coach-badge">🧠 Count Back {b} Steps!</span>
+              <div className="coach-steps">
+                <span className="coach-brain">Start at <b>{a}</b></span>
+                {Array.from({ length: Math.min(b, 6) }, (_, i) => {
+                  const val = a - (i + 1);
+                  const showVal = hintLevel >= 3 || i < b - 1;
+                  return (
+                    <span key={i} className="coach-hop sub">
+                      <small>−1</small>
+                      <b>{showVal ? val : '?'}</b>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       );
+    }
     case 'make10':
-      if (q.support === 2) return <div className="bignum">{a} + ? = 10</div>;
-      return <TenFrame filled={a} extra={hi} themeId={e} />;
+      return (
+        <div className="math-wrap">
+          {q.support === 2 && !showCoach ? (
+            <div className="bignum">{a} + ? = 10</div>
+          ) : (
+            <TenFrame filled={a} extra={showCoach ? (hi ?? 10 - a) : hi} themeId={e} />
+          )}
+          {showCoach && (
+            <div className="math-coach pop" role="region" aria-label="Make 10 strategy">
+              <span className="coach-badge">🖐️ 10-Frame & Finger Trick</span>
+              <p>A full box holds <b>10</b>. <b>{a}</b> spots are full — count the glowing empty spots to reach 10!</p>
+            </div>
+          )}
+        </div>
+      );
     default:
       return null;
   }

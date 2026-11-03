@@ -1,18 +1,26 @@
 package com.rowan.learningworld;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.os.Bundle;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -20,15 +28,21 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.UUID;
 
 public class MainActivity extends Activity {
     private static final String LIVE_URL = "https://rowan-learning-world-ap1.web.app/?tv=1";
     private static final String LOCAL_FALLBACK_URL = "file:///android_asset/index.html";
+    private static final int REQ_RECORD_AUDIO = 1001;
+    private static final int REQ_VOICE_INTENT = 1002;
+
     private WebView webView;
     private TextToSpeech tts;
     private boolean ttsReady = false;
+    private SpeechRecognizer speechRecognizer;
+    private boolean pendingVoiceStart = false;
 
     public class TtsBridge {
         @JavascriptInterface
@@ -59,6 +73,196 @@ public class MainActivity extends Activity {
                 } catch (Exception ignored) {
                 }
             }
+        }
+    }
+
+    public class SttBridge {
+        @JavascriptInterface
+        public boolean isAvailable() {
+            return true;
+        }
+
+        @JavascriptInterface
+        public void startListening() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    startNativeVoiceListening();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void stopListening() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (speechRecognizer != null) {
+                        try {
+                            speechRecognizer.stopListening();
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    sendVoiceStateToJs("idle", "");
+                }
+            });
+        }
+    }
+
+    private void sendVoiceResultToJs(final String transcript, final boolean isFinal) {
+        if (webView == null || transcript == null) return;
+        final String escaped = transcript.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ");
+        webView.post(new Runnable() {
+            @Override
+            public void run() {
+                webView.evaluateJavascript(
+                        "if(window.__rlwOnVoiceResult){window.__rlwOnVoiceResult('" + escaped + "'," + (isFinal ? "true" : "false") + ");}",
+                        null
+                );
+            }
+        });
+    }
+
+    private void sendVoiceStateToJs(final String state, final String err) {
+        if (webView == null) return;
+        final String escapedErr = (err == null ? "" : err).replace("\\", "\\\\").replace("'", "\\'");
+        webView.post(new Runnable() {
+            @Override
+            public void run() {
+                webView.evaluateJavascript(
+                        "if(window.__rlwOnVoiceState){window.__rlwOnVoiceState('" + state + "','" + escapedErr + "');}",
+                        null
+                );
+            }
+        });
+    }
+
+    private void startNativeVoiceListening() {
+        if (tts != null && ttsReady) {
+            try {
+                tts.stop();
+            } catch (Exception ignored) {
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                pendingVoiceStart = true;
+                requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_RECORD_AUDIO);
+                return;
+            }
+        }
+        try {
+            if (SpeechRecognizer.isRecognitionAvailable(this)) {
+                if (speechRecognizer == null) {
+                    speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+                    speechRecognizer.setRecognitionListener(new RecognitionListener() {
+                        @Override
+                        public void onReadyForSpeech(Bundle params) {
+                            sendVoiceStateToJs("listening", "");
+                        }
+
+                        @Override
+                        public void onBeginningOfSpeech() {
+                        }
+
+                        @Override
+                        public void onRmsChanged(float rmsdB) {
+                        }
+
+                        @Override
+                        public void onBufferReceived(byte[] buffer) {
+                        }
+
+                        @Override
+                        public void onEndOfSpeech() {
+                        }
+
+                        @Override
+                        public void onError(int error) {
+                            // Fall back to system RecognizerIntent dialog if direct SpeechRecognizer fails on TV
+                            if (error == SpeechRecognizer.ERROR_CLIENT || error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                                launchVoiceIntentDialog();
+                            } else {
+                                sendVoiceStateToJs("idle", "error_" + error);
+                            }
+                        }
+
+                        @Override
+                        public void onResults(Bundle results) {
+                            ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                            if (matches != null && !matches.isEmpty()) {
+                                sendVoiceResultToJs(matches.get(0), true);
+                            } else {
+                                sendVoiceStateToJs("idle", "");
+                            }
+                        }
+
+                        @Override
+                        public void onPartialResults(Bundle partialResults) {
+                            ArrayList<String> matches = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                            if (matches != null && !matches.isEmpty()) {
+                                sendVoiceResultToJs(matches.get(0), false);
+                            }
+                        }
+
+                        @Override
+                        public void onEvent(int eventType, Bundle params) {
+                        }
+                    });
+                }
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.US.toString());
+                intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+                intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+                sendVoiceStateToJs("listening", "");
+                speechRecognizer.startListening(intent);
+                return;
+            }
+        } catch (Exception ignored) {
+        }
+        launchVoiceIntentDialog();
+    }
+
+    private void launchVoiceIntentDialog() {
+        try {
+            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.US.toString());
+            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Say your answer or command!");
+            sendVoiceStateToJs("listening", "");
+            startActivityForResult(intent, REQ_VOICE_INTENT);
+        } catch (Exception e) {
+            sendVoiceStateToJs("error", "Mic unavailable");
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_RECORD_AUDIO) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED && pendingVoiceStart) {
+                pendingVoiceStart = false;
+                startNativeVoiceListening();
+            } else {
+                pendingVoiceStart = false;
+                launchVoiceIntentDialog();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_VOICE_INTENT) {
+            if (resultCode == RESULT_OK && data != null) {
+                ArrayList<String> matches = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                if (matches != null && !matches.isEmpty()) {
+                    sendVoiceResultToJs(matches.get(0), true);
+                    return;
+                }
+            }
+            sendVoiceStateToJs("idle", "");
         }
     }
 
@@ -104,10 +308,21 @@ public class MainActivity extends Activity {
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         String ua = settings.getUserAgentString();
-        settings.setUserAgentString(ua + " RowanAndroidTV/1.1 CrKey");
+        settings.setUserAgentString(ua + " RowanAndroidTV/1.2 CrKey");
 
         webView.addJavascriptInterface(new TtsBridge(), "AndroidTTS");
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.addJavascriptInterface(new SttBridge(), "AndroidSTT");
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        request.grant(request.getResources());
+                    }
+                });
+            }
+        });
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
@@ -129,6 +344,12 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (speechRecognizer != null) {
+            try {
+                speechRecognizer.destroy();
+            } catch (Exception ignored) {
+            }
+        }
         if (tts != null) {
             try {
                 tts.stop();
@@ -171,7 +392,14 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
+        int code = event.getKeyCode();
+        if (code == KeyEvent.KEYCODE_SEARCH || code == KeyEvent.KEYCODE_VOICE_ASSIST) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
+                startNativeVoiceListening();
+            }
+            return true;
+        }
+        if (code == KeyEvent.KEYCODE_BACK) {
             if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0 && webView != null) {
                 webView.evaluateJavascript(
                         "(function(){ return (window.__rlwBack && window.__rlwBack()) ? 'handled' : 'none'; })()",

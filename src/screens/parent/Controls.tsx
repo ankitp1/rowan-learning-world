@@ -5,7 +5,7 @@ import { ladder, skillsOf } from '../../core/skills';
 import { speak } from '../../core/speech';
 import { THEMES } from '../../core/themes';
 import type { HintMode, MathStage, Profile, ReadingStage, Subject } from '../../core/types';
-import { AgeStageFields } from '../../ui/AgeOnboarding';
+import { AgeStageFields, TIMER_MODES } from '../../ui/AgeOnboarding';
 
 const SUBJECTS: { key: Subject; label: string }[] = [{ key: 'reading', label: 'Reading' }, { key: 'math', label: 'Math' }];
 
@@ -134,6 +134,24 @@ export default function Controls({ profile, onPlacement }: { profile: Profile; o
         <h3>Hints</h3>
         {([['full', 'All hints (nudge, narrow, show me)'], ['limited', "No \"Show me\""], ['nudge-only', 'Nudge only']] as [HintMode, string][]).map(([v, l]) => (
           <label key={v} className="check"><input type="radio" name={`hint-${profile.id}`} checked={s.hintMode === v} onChange={() => set((x) => { x.hintMode = v; })} /> {l}</label>
+        ))}
+      </section>
+
+      <section className="ctl">
+        <h3>⏱️ Question Timer & Speed Bonus</h3>
+        <p className="small">
+          Optional countdown timer that scales with question difficulty and rewards faster answers with up to 3 ⭐ stars (never locks out or penalizes when time runs out).
+        </p>
+        {TIMER_MODES.map((tm) => (
+          <label key={tm.id} className="check">
+            <input
+              type="radio"
+              name={`timer-${profile.id}`}
+              checked={(s.timerMode ?? 'off') === tm.id}
+              onChange={() => set((x) => { x.timerMode = tm.id; })}
+            />{' '}
+            <b>{tm.label}:</b> {tm.desc}
+          </label>
         ))}
       </section>
 

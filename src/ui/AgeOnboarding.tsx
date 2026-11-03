@@ -1,8 +1,17 @@
 import { useState } from 'react';
+import { patchProfile } from '../core/db';
 import { MATH_STAGES, READING_STAGES, applyAgeCalibration, defaultStagesForAge } from '../core/engine';
-import type { MathStage, Profile, ReadingStage } from '../core/types';
+import type { MathStage, Profile, ReadingStage, TimerMode } from '../core/types';
 
 export const AGES = [3, 4, 5, 6, 7, 8];
+
+export const TIMER_MODES: { id: TimerMode; label: string; desc: string }[] = [
+  { id: 'off', label: 'No Timer', desc: 'Take all the time you want (1 ⭐ per answer)' },
+  { id: 'auto', label: 'Auto by Difficulty', desc: '30s easy · 22s medium · 15s hard (up to 3 ⭐ speed bonus!)' },
+  { id: 'relaxed', label: 'Relaxed (30s)', desc: 'Gentle 25–35s timer with up to 3 ⭐ speed bonus' },
+  { id: 'standard', label: 'Standard (18s)', desc: 'Moderate 14–24s timer with up to 3 ⭐ speed bonus' },
+  { id: 'fast', label: 'Fast Challenge (12s)', desc: 'Quick 9–16s mental-math challenge with 3 ⭐ rewards' },
+];
 
 export function AgeStageFields({
   age,
@@ -86,6 +95,7 @@ export function AgeOnboardingModal({
   const [age, setAge] = useState<number>(initAge);
   const [readingStage, setReadingStage] = useState<ReadingStage>(profile.readingStage ?? defaults.readingStage);
   const [mathStage, setMathStage] = useState<MathStage>(profile.mathStage ?? defaults.mathStage);
+  const [timerMode, setTimerMode] = useState<TimerMode>(profile.settings.timerMode ?? 'off');
 
   const handleAge = (nextAge: number) => {
     setAge(nextAge);
@@ -101,6 +111,7 @@ export function AgeOnboardingModal({
       mathStage,
       markPlacementDone: true,
     });
+    patchProfile(profile.id, (p) => { p.settings.timerMode = timerMode; });
     onClose();
   };
 
@@ -119,6 +130,22 @@ export function AgeOnboardingModal({
           onReadingChange={setReadingStage}
           onMathChange={setMathStage}
         />
+        <div className="age-sec">
+          <span className="age-label">⏱️ Question Timer & Speed Bonus Stars</span>
+          <div className="stage-grid">
+            {TIMER_MODES.map((tm) => (
+              <button
+                type="button"
+                key={tm.id}
+                className={`stage-card${timerMode === tm.id ? ' on' : ''}`}
+                onClick={() => setTimerMode(tm.id)}
+              >
+                <b>{tm.label}</b>
+                <small>{tm.desc}</small>
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="row">
           <button type="button" className="btn primary" data-autofocus onClick={save}>
             Save & Update Games

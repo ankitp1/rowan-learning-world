@@ -49,6 +49,7 @@ export interface SkillState {
 export type HintMode = 'full' | 'limited' | 'nudge-only';
 export type ReadingStage = 'beginner' | 'phonics' | 'fluent';
 export type MathStage = 'counting' | 'add10' | 'advanced20';
+export type TimerMode = 'off' | 'auto' | 'relaxed' | 'standard' | 'fast';
 
 export interface ProfileSettings {
   dailyMinutes: number; // 0 = unlimited
@@ -58,6 +59,8 @@ export interface ProfileSettings {
   disabledApps: string[];
   /** Lock-out window, 24h "HH:MM". May cross midnight. */
   bedtime?: { from: string; to: string } | null;
+  /** Question timer mode: off, auto (scales with difficulty), relaxed, standard, or fast. */
+  timerMode?: TimerMode;
 }
 
 export interface Profile {

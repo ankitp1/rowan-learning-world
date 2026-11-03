@@ -7,6 +7,9 @@ import { createProfile, getDB, getGameLevel, resetAll } from '../core/db';
 import { ladder } from '../core/skills';
 import { APPS } from '../core/registry';
 import type { Attempt, Profile, SkillState } from '../core/types';
+import { normalizeSpokenText } from '../core/voice';
+import { computeSpeedStars, timerSecondsForQuestion } from '../ui/QuestionCard';
+import { makeQuestion } from '../content/generators';
 
 const profile = (over: Partial<Profile> = {}): Profile => ({
   id: 'p1', name: 'Rowan', avatar: '🧒', themeId: 'pirate', levels: {}, focusSkills: [], placementDone: true, stars: 0, stickers: [],
@@ -200,5 +203,24 @@ describe('age & readiness calibration', () => {
     expect(plan).not.toContain('word-builder');
     expect(plan).not.toContain('blend-plank');
     expect(plan).not.toContain('coin-count');
+  });
+
+  it('parses spoken numbers and homophones for voice answers', () => {
+    expect(normalizeSpokenText('Twelve!').tokens).toContain('12');
+    expect(normalizeSpokenText('I think it is eight').tokens).toContain('8');
+    expect(normalizeSpokenText('ate coins').tokens).toContain('8');
+    expect(normalizeSpokenText('too plus for').tokens).toEqual(expect.arrayContaining(['2', '4']));
+  });
+
+  it('scales timer with difficulty and awards proportional speed bonus stars', () => {
+    const easy = makeQuestion('math.add.5', { difficulty: 0 });
+    const hard = makeQuestion('math.add.20', { difficulty: 2 });
+    expect(timerSecondsForQuestion(easy, 'off')).toBe(0);
+    expect(timerSecondsForQuestion(easy, 'auto')).toBe(30);
+    expect(timerSecondsForQuestion(hard, 'auto')).toBe(15);
+    expect(computeSpeedStars(3000, 15, true)).toBe(3);   // fast (<50% time used) -> 3 stars
+    expect(computeSpeedStars(10000, 15, true)).toBe(2);  // medium (50-80% time used) -> 2 stars
+    expect(computeSpeedStars(16000, 15, true)).toBe(1);  // after timer -> still earns 1 star
+    expect(computeSpeedStars(2000, 15, false)).toBe(1);  // used hint or wrong try -> 1 star
   });
 });
