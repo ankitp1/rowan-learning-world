@@ -14,5 +14,20 @@ createRoot(document.getElementById('root')!).render(
 );
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      // Promptly check for updates
+      void reg.update();
+      reg.addEventListener('updatefound', () => {
+        const worker = reg.installing;
+        if (worker) {
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'activated' && navigator.serviceWorker.controller) {
+              window.location.reload();
+            }
+          });
+        }
+      });
+    }).catch(() => {});
+  });
 }

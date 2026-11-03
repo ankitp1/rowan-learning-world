@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { frontier } from '../core/engine';
 import { patchProfile } from '../core/db';
 import { APPS } from '../core/registry';
@@ -8,6 +8,7 @@ import type { MiniApp, Profile, Subject, Theme } from '../core/types';
 import { isVoiceSupported, toggleVoiceListening, useVoice } from '../core/voice';
 import { AgeOnboardingModal } from '../ui/AgeOnboarding';
 import { HelperAvatar, IslandBase, MapTrail } from '../ui/Art';
+import { ThemePickerModal } from '../ui/ThemePicker';
 import { WelcomeTourModal } from '../ui/WelcomeTour';
 
 const TONE: Record<string, Record<string, string>> = {
@@ -61,6 +62,7 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
 }) {
   const [book, setBook] = useState(false);
   const [ageModal, setAgeModal] = useState(false);
+  const [showThemePicker, setShowThemePicker] = useState(false);
   const [showTour, setShowTour] = useState(() => {
     // Show on first run or if explicitly opened
     try {
@@ -70,12 +72,29 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
     }
   });
   const voice = useVoice();
-  const allowed = THEMES.filter((t) => !profile.settings.allowedThemes.length || profile.settings.allowedThemes.includes(t.id));
-  const cycleTheme = () => {
-    const i = allowed.findIndex((t) => t.id === theme.id);
-    const nxt = allowed[(i + 1) % allowed.length];
-    if (nxt) patchProfile(profile.id, (p) => { p.themeId = nxt.id; });
+
+  // Auto-upgrade profiles so new themes (space-ranger, western, dino) are instantly accessible:
+  const allowed = useMemo(() => {
+    const custom = profile.settings?.allowedThemes ?? [];
+    if (!custom.length) return THEMES;
+    const legacyThemes = ['pirate', 'super', 'pups', 'rescue'];
+    if (custom.every((id) => legacyThemes.includes(id)) && custom.length === legacyThemes.length) {
+      return THEMES;
+    }
+    const filtered = THEMES.filter((t) => custom.includes(t.id));
+    return filtered.length > 0 ? filtered : THEMES;
+  }, [profile.settings?.allowedThemes]);
+
+  const selectTheme = (themeId: string) => {
+    patchProfile(profile.id, (p) => {
+      p.themeId = themeId;
+      // If allowedThemes had legacy values, make sure the chosen theme is unlocked
+      if (p.settings.allowedThemes?.length && !p.settings.allowedThemes.includes(themeId)) {
+        p.settings.allowedThemes = [];
+      }
+    });
   };
+
   const islands: { key: IslandKey; name: string; emoji: string }[] = [
     { key: 'reading', name: theme.islands.reading, emoji: theme.islandEmoji.reading },
     { key: 'math', name: theme.islands.math, emoji: theme.islandEmoji.math },
@@ -102,7 +121,9 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
             {voice.status === 'listening' ? '🎙️ Listening...' : '🎤 Voice'}
           </button>
         )}
-        {allowed.length > 1 && <button className="chip-btn" onClick={cycleTheme}>{theme.emoji} Change look</button>}
+        <button className="chip-btn" onClick={() => setShowThemePicker(true)} aria-label="Change look and character buddy">
+          {theme.emoji} Change look
+        </button>
         <button className="chip-btn lock" onClick={onGrownUps} aria-label="Grown-ups">🔒</button>
       </header>
       <h1 className="map-title">{theme.mapTitle.replace('{name}', profile.name)}</h1>
@@ -142,6 +163,15 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
       </div>
       {book && <StickerBook profile={profile} theme={theme} onClose={() => setBook(false)} />}
       {ageModal && <AgeOnboardingModal profile={profile} onClose={() => setAgeModal(false)} />}
+      {showThemePicker && (
+        <ThemePickerModal
+          currentThemeId={theme.id}
+          themes={allowed}
+          childName={profile.name}
+          onSelect={selectTheme}
+          onClose={() => setShowThemePicker(false)}
+        />
+      )}
       {showTour && (
         <WelcomeTourModal
           theme={theme}
