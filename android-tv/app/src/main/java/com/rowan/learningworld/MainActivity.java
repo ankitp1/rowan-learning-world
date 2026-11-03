@@ -12,6 +12,8 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
+import android.webkit.ConsoleMessage;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -318,6 +320,7 @@ public class MainActivity extends Activity {
         webView.setBackgroundColor(Color.parseColor("#0d1b2a"));
         webView.setFocusable(true);
         webView.setFocusableInTouchMode(true);
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -336,6 +339,12 @@ public class MainActivity extends Activity {
         webView.addJavascriptInterface(new TtsBridge(), "AndroidTTS");
         webView.addJavascriptInterface(new SttBridge(), "AndroidSTT");
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage cm) {
+                Log.d("RowanTV", "[" + cm.messageLevel() + "] " + cm.message() + " (" + cm.sourceId() + ":" + cm.lineNumber() + ")");
+                return true;
+            }
+
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(new Runnable() {
@@ -425,16 +434,17 @@ public class MainActivity extends Activity {
         if (code == KeyEvent.KEYCODE_BACK) {
             if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0 && webView != null) {
                 webView.evaluateJavascript(
-                        "(function(){ return (window.__rlwBack && window.__rlwBack()) ? 'handled' : 'none'; })()",
+                        "(function(){ try { return (window.__rlwBack && window.__rlwBack()) ? 'handled' : 'none'; } catch(e){ return 'none'; } })()",
                         new ValueCallback<String>() {
                             @Override
                             public void onReceiveValue(String value) {
-                                if (value == null || !value.contains("handled")) {
-                                    if (webView.canGoBack()) {
-                                        webView.goBack();
-                                    } else {
-                                        finish();
-                                    }
+                                if (value != null && value.contains("handled")) {
+                                    return;
+                                }
+                                if (webView.canGoBack()) {
+                                    webView.goBack();
+                                } else {
+                                    finish();
                                 }
                             }
                         }

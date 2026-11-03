@@ -3,9 +3,11 @@ import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/fredoka';
 import App from './App';
 import { initLegacySupportIfNeeded } from './core/legacyDevice';
+import { initTVOptimization } from './core/tv';
 import './styles.css';
 
 initLegacySupportIfNeeded();
+initTVOptimization();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

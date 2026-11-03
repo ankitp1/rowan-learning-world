@@ -1,6 +1,7 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { getDB, getProfile, useDB } from './core/db';
-import { focusFirst, useSpatialNav } from './core/nav';
+import { focusFirst, useBackHandler, useSpatialNav } from './core/nav';
+import { initTVOptimization } from './core/tv';
 import { appById } from './core/registry';
 import { loadRecordedSounds, setSpeechRate, stopSpeaking } from './core/speech';
 import { startCloudSync } from './core/sync';
@@ -48,7 +49,7 @@ export default function App() {
 
   useEffect(() => { applyTheme(theme); }, [theme]);
   useEffect(() => { setSpeechRate(profile?.settings.speechRate ?? 0.9); }, [profile?.settings.speechRate]);
-  useEffect(() => { loadRecordedSounds(); startCloudSync(); }, []);
+  useEffect(() => { loadRecordedSounds(); startCloudSync(); initTVOptimization(); }, []);
 
   // Keep the D-pad cursor on something sensible after every screen change.
   const routeKey = route.name + ('key' in route ? route.key : '') + ('appId' in route ? route.appId : '') + String(gate);
@@ -60,8 +61,14 @@ export default function App() {
     setRoute(p && !p.placementDone ? { name: 'placement' } : { name: 'hub' });
   };
 
+  // Close Grown-ups PIN gate modal first if open
+  useBackHandler(() => {
+    setGate(false);
+    return true;
+  }, gate);
+
   const back = useCallback(() => {
-    if (gate) { setGate(false); return; }
+    if (route.name === 'who') return false;
     setRoute((r) => {
       switch (r.name) {
         case 'play': return { name: 'island', key: r.from };
@@ -72,7 +79,8 @@ export default function App() {
         default: return r;
       }
     });
-  }, [gate, profile]);
+    return true;
+  }, [profile, route.name]);
   useSpatialNav(back);
 
   const needsProfile = route.name !== 'who' && route.name !== 'parent' && !profile;

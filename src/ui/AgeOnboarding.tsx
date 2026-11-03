@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { patchProfile } from '../core/db';
 import { MATH_STAGES, READING_STAGES, applyAgeCalibration, defaultStagesForAge } from '../core/engine';
 import type { MathStage, Profile, ReadingStage, TimerMode } from '../core/types';
+import { useBackHandler } from '../core/nav';
 
 export const AGES = [3, 4, 5, 6, 7, 8];
 
@@ -96,6 +97,11 @@ export function AgeOnboardingModal({
   const [readingStage, setReadingStage] = useState<ReadingStage>(profile.readingStage ?? defaults.readingStage);
   const [mathStage, setMathStage] = useState<MathStage>(profile.mathStage ?? defaults.mathStage);
   const [timerMode, setTimerMode] = useState<TimerMode>(profile.settings.timerMode ?? 'off');
+
+  useBackHandler(() => {
+    onClose();
+    return true;
+  }, true);
 
   const handleAge = (nextAge: number) => {
     setAge(nextAge);

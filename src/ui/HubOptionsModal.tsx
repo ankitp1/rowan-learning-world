@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import type { Theme } from '../core/types';
+import { focusFirst, useBackHandler } from '../core/nav';
 
 export function HubOptionsModal({
   theme,
@@ -21,8 +23,27 @@ export function HubOptionsModal({
   onOpenGrownUps: () => void;
   onClose: () => void;
 }) {
+  const handleClose = () => {
+    onClose();
+    setTimeout(() => {
+      document.getElementById('hub-menu-btn')?.focus();
+    }, 40);
+  };
+
+  // Pressing TV remote Back button or Escape closes this menu cleanly without navigating away from Hub
+  useBackHandler(() => {
+    handleClose();
+    return true;
+  }, true);
+
+  // Focus the first tile on TV/remote mount
+  useEffect(() => {
+    const timer = setTimeout(() => focusFirst(), 40);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="overlay" onClick={onClose}>
+    <div className="overlay" onClick={handleClose}>
       <div
         className="card hub-options-modal"
         onClick={(e) => e.stopPropagation()}
@@ -32,13 +53,14 @@ export function HubOptionsModal({
       >
         <div className="modal-header-row">
           <h2 id="hub-options-title">⚙️ Adventure Menu</h2>
-          <button className="modal-close-btn" onClick={onClose} aria-label="Close menu">✕</button>
+          <button className="modal-close-btn" onClick={handleClose} aria-label="Close menu">✕</button>
         </div>
         <p className="modal-sub">Options, character companion, and parent settings</p>
 
         <div className="hub-options-grid">
           <button
             className="option-tile"
+            data-autofocus
             onClick={() => { onClose(); onOpenThemePicker(); }}
             aria-label="Change character companion and theme"
           >
@@ -100,6 +122,12 @@ export function HubOptionsModal({
               <small>Curriculum, time limits & PIN</small>
             </div>
             <span className="tile-arrow">➔</span>
+          </button>
+        </div>
+
+        <div className="modal-footer-row">
+          <button className="btn modal-done-btn" onClick={handleClose}>
+            Back to Adventure
           </button>
         </div>
       </div>

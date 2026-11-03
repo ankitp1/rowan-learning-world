@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Theme } from '../core/types';
 import { HelperAvatar } from './Art';
 import { sfx, speakThemeGreeting, speakThemeSample, stopSpeaking } from '../core/speech';
+import { focusFirst, useBackHandler } from '../core/nav';
 
 const SAMPLE_QUOTES: Record<string, string> = {
   'space-ranger': 'To learning... and beyond! Star Command reporting! Ready for our mission, Cadet!',
@@ -27,6 +28,17 @@ export function ThemePickerModal({
   onClose: () => void;
 }) {
   const [playingId, setPlayingId] = useState<string | null>(null);
+
+  // Pressing TV remote Back button or Escape closes look picker and returns to Hub
+  useBackHandler(() => {
+    onClose();
+    return true;
+  }, true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => focusFirst(), 40);
+    return () => clearTimeout(timer);
+  }, []);
 
   const previewVoice = (e: React.MouseEvent, t: Theme) => {
     e.stopPropagation();
@@ -55,13 +67,15 @@ export function ThemePickerModal({
         </p>
 
         <div className="theme-grid">
-          {themes.map((t) => {
+          {themes.map((t, idx) => {
             const isCurrent = t.id === currentThemeId;
+            const isAutofocus = isCurrent || (!themes.some(x => x.id === currentThemeId) && idx === 0);
             return (
               <div
                 key={t.id}
                 className={`theme-card${isCurrent ? ' active' : ''}`}
                 tabIndex={0}
+                data-autofocus={isAutofocus ? '' : undefined}
                 role="button"
                 aria-pressed={isCurrent}
                 onClick={() => handleSelect(t)}

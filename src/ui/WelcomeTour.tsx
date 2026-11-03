@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { speak } from '../core/speech';
 import type { Theme } from '../core/types';
 import { HelperAvatar } from './Art';
+import { useBackHandler } from '../core/nav';
 
 interface WelcomeTourProps {
   theme: Theme;
@@ -11,6 +12,11 @@ interface WelcomeTourProps {
 
 export function WelcomeTourModal({ theme, childName, onFinish }: WelcomeTourProps) {
   const [step, setStep] = useState(0);
+
+  useBackHandler(() => {
+    onFinish();
+    return true;
+  }, true);
 
   const steps = [
     {

@@ -6,6 +6,7 @@ import { speak, speakThemeGreeting } from '../core/speech';
 import { THEMES, themeById } from '../core/themes';
 import type { MiniApp, Profile, Subject, Theme } from '../core/types';
 import { isVoiceSupported, toggleVoiceListening, useVoice } from '../core/voice';
+import { focusFirst, useBackHandler } from '../core/nav';
 import { AgeOnboardingModal } from '../ui/AgeOnboarding';
 import { HelperAvatar, IslandBase, MapTrail } from '../ui/Art';
 import { HubOptionsModal } from '../ui/HubOptionsModal';
@@ -29,6 +30,11 @@ export const appsOnIsland = (key: IslandKey, profile: Profile): MiniApp[] =>
     key === 'mystery' || key === 'brain' ? a.place === key : !a.place && a.subject === (key as Subject));
 
 function StickerBook({ profile, theme, onClose }: { profile: Profile; theme: Theme; onClose: () => void }) {
+  useBackHandler(() => {
+    onClose();
+    return true;
+  }, true);
+
   return (
     <div className="overlay" onClick={onClose}>
       <div className="card" onClick={(e) => e.stopPropagation()}>
@@ -130,7 +136,7 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
               {voice.status === 'listening' ? '🎙️ Listening...' : '🎤 Voice'}
             </button>
           )}
-          <button className="chip-btn menu-chip" onClick={() => setShowOptions(true)} aria-label="Adventure options and menu">
+          <button id="hub-menu-btn" className="chip-btn menu-chip" onClick={() => setShowOptions(true)} aria-label="Adventure options and menu">
             ⚙️ Menu
           </button>
           <button className="chip-btn lock" onClick={onGrownUps} aria-label="Grown-ups" title="Parent settings">
