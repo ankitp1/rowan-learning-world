@@ -80,6 +80,11 @@ export const APPS: MiniApp[] = [
     component: lazy(() => import('../apps/TicTacToe')),
   },
   {
+    id: 'wonder-trivia', title: 'Wonder Trivia', subject: 'games', icon: '🌍',
+    blurb: 'Solo & 2-Player age-adaptive trivia from WonderPods', skills: [],
+    component: lazy(() => import('../apps/WonderTrivia')),
+  },
+  {
     id: 'maze', title: 'Number Maze', subject: 'games', icon: '🌀',
     blurb: 'Collect 1, 2, 3 in order, then escape', skills: [],
     component: lazy(() => import('../apps/Maze')),

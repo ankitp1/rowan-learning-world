@@ -38,9 +38,20 @@ export function loadRecordedSounds() {
     .catch(() => {});
 }
 
-function pickVoice(): SpeechSynthesisVoice | undefined {
+let activeThemeVoice: { pitch: number; rate: number; kokoroVoice?: string } = { pitch: 1.1, rate: 0.9 };
+
+export function setThemeVoice(style: { pitch: number; rate: number; kokoroVoice?: string }) {
+  activeThemeVoice = { ...style };
+}
+
+function pickVoice(preferredVoice?: string): SpeechSynthesisVoice | undefined {
   const voices = synth?.getVoices() ?? [];
-  return voices.find((v) => /en[-_]US/i.test(v.lang) && /samantha|ava|allison|google us|natural/i.test(v.name))
+  if (preferredVoice) {
+    const match = voices.find((v) => new RegExp(preferredVoice, 'i').test(v.name));
+    if (match) return match;
+  }
+  // Look for friendly, high quality natural speech voices
+  return voices.find((v) => /en[-_]US/i.test(v.lang) && /samantha|ava|allison|zoe|serena|tom|oliver|google us|natural/i.test(v.name))
     ?? voices.find((v) => /^en/i.test(v.lang));
 }
 
@@ -58,8 +69,8 @@ export function speak(text: string, opts: { rate?: number; pitch?: number; inter
     const clean = text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]/g, '').trim();
     if (!clean) return resolve();
 
-    const finalRate = (opts.rate ?? 1) * rate;
-    const finalPitch = opts.pitch ?? 1.1;
+    const finalRate = (opts.rate ?? activeThemeVoice.rate ?? 1) * rate;
+    const finalPitch = opts.pitch ?? activeThemeVoice.pitch ?? 1.1;
     const estMs = Math.min(7500, 550 + (clean.length * 95) / (finalRate || 1));
 
     // 1. Native Android TV / Chromecast TTS bridge

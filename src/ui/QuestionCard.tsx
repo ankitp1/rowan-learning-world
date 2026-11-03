@@ -208,7 +208,10 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
     sfx.soft();
     setWrong((w) => w ?? c);
     setGone((g) => [...g, c.id]);
-    say('Not quite. Try again, you can do it!');
+    const encouragement = theme.encouragements?.length
+      ? theme.encouragements[Math.floor(Math.random() * theme.encouragements.length)]
+      : "That was a good try! Let's listen closely and try another choice!";
+    say(fill(encouragement, theme));
   }
 
   const tapTile = (i: number) => {

@@ -91,7 +91,17 @@ export interface Theme {
   id: string;
   name: string;
   emoji: string;
-  helper: { name: string; emoji: string };
+  helper: {
+    name: string;
+    emoji: string;
+    role: string;
+    personality: string;
+    voiceStyle: {
+      pitch: number;
+      rate: number;
+      kokoroVoice: string; // e.g. 'bm_george', 'af_bella', 'am_adam', 'af_heart'
+    };
+  };
   colors: { bg1: string; bg2: string; primary: string; accent: string; card: string; text: string };
   collectible: { emoji: string; one: string; many: string };
   container: { emoji: string; name: string };
@@ -105,6 +115,8 @@ export interface Theme {
   missionNames: string[];
   stickers: string[];
   praise: string[];
+  encouragements: string[];
+  growthNudges: string[];
   decor: string[];
 }
 

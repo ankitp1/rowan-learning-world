@@ -7,6 +7,7 @@ import type { MiniApp, Profile, Subject, Theme } from '../core/types';
 import { isVoiceSupported, toggleVoiceListening, useVoice } from '../core/voice';
 import { AgeOnboardingModal } from '../ui/AgeOnboarding';
 import { HelperAvatar, IslandBase, MapTrail } from '../ui/Art';
+import { WelcomeTourModal } from '../ui/WelcomeTour';
 
 const TONE: Record<string, Record<string, string>> = {
   pirate: { reading: '#f6d98a', math: '#ffb3a7', mystery: '#c3aef0', brain: '#9fe3b8', games: '#ffc27a' },
@@ -39,10 +40,11 @@ function StickerBook({ profile, theme, onClose }: { profile: Profile; theme: The
 }
 
 function helperGreeting(theme: Theme, name: string): string {
-  if (theme.id === 'pirate') return `Ahoy, Captain ${name}! Ready for a mission?`;
-  if (theme.id === 'pups') return `Ruff-ruff, Pup Leader ${name}! Ready for a rescue mission?`;
-  if (theme.id === 'rescue') return `Hi Ranger ${name}! Which creature shall we rescue today?`;
-  return `Hi ${name}! Ready for a hero mission?`;
+  const role = theme.helper?.role ? ` - ${theme.helper.role}` : '';
+  if (theme.id === 'pirate') return `Ahoy, Captain ${name}! I'm Barnaby${role}. The seas look bright and I'm ready to explore with you!`;
+  if (theme.id === 'pups') return `Ruff-ruff, Pup Leader ${name}! Pip and Scout are on duty! No puzzle is too big for us!`;
+  if (theme.id === 'rescue') return `Welcome back, Ranger ${name}! Luna and Blaze are watching the magical creatures. Ready for a wonder walk?`;
+  return `Greetings, Hero ${name}! Bolt and Nova here. Your super brain is charged up and ready!`;
 }
 
 /** The map: one island per subject, plus the big "Start mission" button. */
@@ -52,6 +54,14 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
 }) {
   const [book, setBook] = useState(false);
   const [ageModal, setAgeModal] = useState(false);
+  const [showTour, setShowTour] = useState(() => {
+    // Show on first run or if explicitly opened
+    try {
+      return !localStorage?.getItem?.(`rlw.tourDone.${profile.id}`);
+    } catch {
+      return false;
+    }
+  });
   const voice = useVoice();
   const allowed = THEMES.filter((t) => !profile.settings.allowedThemes.length || profile.settings.allowedThemes.includes(t.id));
   const cycleTheme = () => {
@@ -74,6 +84,7 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
         <button className="chip-btn" onClick={onSwitch}>{profile.avatar} {profile.name}</button>
         <span className="stars-count" aria-label={`${profile.stars} stars`}>⭐ {profile.stars}</span>
         <button className="chip-btn" onClick={() => setBook(true)}>📖 Stickers</button>
+        <button className="chip-btn" onClick={() => setShowTour(true)}>💡 Tour</button>
         <button className="chip-btn" onClick={() => setAgeModal(true)}>🎯 Age {profile.age ? (profile.age === 8 ? '8+' : profile.age) : 'Level'}</button>
         {isVoiceSupported() && (
           <button
@@ -113,6 +124,16 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
       </div>
       {book && <StickerBook profile={profile} theme={theme} onClose={() => setBook(false)} />}
       {ageModal && <AgeOnboardingModal profile={profile} onClose={() => setAgeModal(false)} />}
+      {showTour && (
+        <WelcomeTourModal
+          theme={theme}
+          childName={profile.name}
+          onFinish={() => {
+            localStorage.setItem(`rlw.tourDone.${profile.id}`, 'true');
+            setShowTour(false);
+          }}
+        />
+      )}
     </div>
   );
 }
