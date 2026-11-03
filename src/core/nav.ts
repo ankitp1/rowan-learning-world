@@ -7,20 +7,23 @@ import { useEffect } from 'react';
  * 1. Modals & Overlays trap focus: spatial navigation stays strictly inside the active modal.
  * 2. Back Button Stack: hardware Back key / Escape closes the topmost modal/sheet first,
  *    navigates from mini-game to island, island to hub, and hub to profile picker.
- * 3. Exposes `window.__rlwBack()` returning boolean `true` when handled, preventing Android
+ * 3. 250ms debounce prevents remote IR/Bluetooth bounce double-clicks.
+ * 4. Exposes `window.__rlwBack()` returning boolean `true` when handled, preventing Android
  *    WebView from accidentally exiting the application.
  */
 const SELECTOR = 'button:not([disabled]), [tabindex="0"], input:not([disabled]), select:not([disabled]), a[href]';
 
 export type BackHandler = () => boolean | void;
-const backStack: BackHandler[] = [];
+const modalBackStack: BackHandler[] = [];
+let rootBackHandler: (() => boolean | void) | undefined;
+let lastBackTime = 0;
 
-/** Register a back handler. When Back is pressed, the most recently registered handler runs. */
+/** Register a modal or subscreen back handler (LIFO stack) */
 export function registerBackHandler(handler: BackHandler): () => void {
-  backStack.push(handler);
+  modalBackStack.push(handler);
   return () => {
-    const idx = backStack.lastIndexOf(handler);
-    if (idx !== -1) backStack.splice(idx, 1);
+    const idx = modalBackStack.lastIndexOf(handler);
+    if (idx !== -1) modalBackStack.splice(idx, 1);
   };
 }
 
@@ -37,16 +40,31 @@ export function useBackHandler(handler: BackHandler, active: boolean = true) {
  * Returns true if an action was handled; returns false if at the root screen.
  */
 export function handleBack(): boolean {
-  while (backStack.length > 0) {
-    const handler = backStack.pop()!;
+  const now = Date.now();
+  if (now - lastBackTime < 250) {
+    return true; // Debounce rapid remote bounces
+  }
+  lastBackTime = now;
+
+  // 1. First, pop any open modal / overlay handler:
+  while (modalBackStack.length > 0) {
+    const handler = modalBackStack.pop()!;
     const res = handler();
-    // If the handler returned false explicitly, continue to the next one;
-    // otherwise treat as handled.
     if (res !== false) {
-      setTimeout(() => focusFirst(), 60);
+      setTimeout(() => focusFirst(), 50);
       return true;
     }
   }
+
+  // 2. If no modal is open, invoke the root screen navigator:
+  if (rootBackHandler) {
+    const res = rootBackHandler();
+    if (res !== false) {
+      setTimeout(() => focusFirst(), 50);
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -123,15 +141,9 @@ function move(dir: 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight') {
   }
 }
 
-export function useSpatialNav(defaultBack?: () => void) {
+export function useSpatialNav(defaultBack?: () => boolean | void) {
   useEffect(() => {
-    // If a default root back handler is provided (e.g. from App.tsx), register it at the base of the stack
-    const unreg = defaultBack
-      ? registerBackHandler(() => {
-          defaultBack();
-          return true;
-        })
-      : undefined;
+    rootBackHandler = defaultBack;
 
     // Expose global bridge for Android TV / Chromecast native hardware Back button
     (window as unknown as { __rlwBack?: () => boolean }).__rlwBack = () => {
@@ -181,7 +193,9 @@ export function useSpatialNav(defaultBack?: () => void) {
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
-      unreg?.();
+      if (rootBackHandler === defaultBack) {
+        rootBackHandler = undefined;
+      }
     };
   }, [defaultBack]);
 }
