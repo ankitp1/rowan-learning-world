@@ -332,6 +332,10 @@ public class MainActivity extends Activity {
         settings.setAllowFileAccessFromFileURLs(true);
         settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        // Lock textZoom to 100% so Android OS accessibility font scaling doesn't cause TV layout overflow
+        settings.setTextZoom(100);
+        settings.setUseWideViewPort(true);
+        settings.setLoadWithOverviewMode(true);
 
         String ua = settings.getUserAgentString();
         settings.setUserAgentString(ua + " RowanAndroidTV/1.2 CrKey");

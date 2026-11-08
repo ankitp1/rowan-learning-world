@@ -19,6 +19,87 @@ const lines = [
   [0, 4, 8], [2, 4, 6],
 ];
 
+export interface TicTacToeCoachFeedback {
+  winningLine?: number[];
+  criticalSquare?: number;
+  tipTitle: string;
+  tipText: string;
+  spokenTip: string;
+}
+
+export function analyzeLoss(board: Piece[], winningPiece: 'O' | 'X', playerName: string): TicTacToeCoachFeedback {
+  // Find which line won
+  let winLine: number[] | undefined;
+  for (const [x, y, z] of lines) {
+    if (board[x] && board[x] === board[y] && board[x] === board[z]) {
+      winLine = [x, y, z];
+      break;
+    }
+  }
+
+  const squareNames: Record<number, string> = {
+    0: 'the top-left corner',
+    1: 'the top-middle square',
+    2: 'the top-right corner',
+    3: 'the middle-left square',
+    4: 'the center square',
+    5: 'the middle-right square',
+    6: 'the bottom-left corner',
+    7: 'the bottom-middle square',
+    8: 'the bottom-right corner',
+  };
+
+  const lineNames: Record<string, string> = {
+    '0,1,2': 'the top row',
+    '3,4,5': 'the middle row',
+    '6,7,8': 'the bottom row',
+    '0,3,6': 'the left column',
+    '1,4,7': 'the middle column',
+    '2,5,8': 'the right column',
+    '0,4,8': 'the diagonal line',
+    '2,4,6': 'the diagonal line',
+  };
+
+  const key = winLine ? winLine.join(',') : '';
+  const rowDesc = lineNames[key] || 'a three-in-a-row line';
+
+  // 1. Did the player miss an offensive winning move? (Had 2 'X's with 1 empty space)
+  for (const [x, y, z] of lines) {
+    const row = [board[x], board[y], board[z]];
+    if (row.filter((p) => p === 'X').length === 2 && row.includes(null)) {
+      const emptyIdx = [x, y, z][row.indexOf(null)];
+      const sqDesc = squareNames[emptyIdx] || 'that empty square';
+      return {
+        winningLine: winLine,
+        criticalSquare: emptyIdx,
+        tipTitle: '🎯 Missed Winning Chance!',
+        tipText: `You almost had it! Spotting ${sqDesc} would have completed your own three in a row to win!`,
+        spokenTip: `Great try, ${playerName}! Next time, look closely—you had two in a row and tapping ${sqDesc} would have won the game!`,
+      };
+    }
+  }
+
+  // 2. Defensive oversight: The opponent got 3 in a row, so blocking the final square was the key move
+  if (winLine) {
+    const lastWinSquare = winLine[2];
+    const sqDesc = squareNames[lastWinSquare] || 'that square';
+    return {
+      winningLine: winLine,
+      criticalSquare: lastWinSquare,
+      tipTitle: '🛡️ Defense Tip: Block the Line!',
+      tipText: `Look at ${rowDesc}! When your opponent gets two pieces in a line, blocking ${sqDesc} stops them in their tracks!`,
+      spokenTip: `Super effort, ${playerName}! Next time your opponent gets two in a row across ${rowDesc}, block ${sqDesc} to stop the line!`,
+    };
+  }
+
+  // 3. General opening tip: Center control
+  return {
+    tipTitle: '⭐ Strategy Tip: Center & Corners',
+    tipText: 'Taking the center square or corners gives you the most open paths to make three in a row!',
+    spokenTip: `Great match, ${playerName}! Pro tip: grabbing the center square early gives you the most ways to make a line!`,
+  };
+}
+
 function winner(b: Piece[]): Piece {
   for (const [x, y, z] of lines) if (b[x] && b[x] === b[y] && b[x] === b[z]) return b[x];
   return null;
@@ -60,6 +141,8 @@ export default function TicTacToe({ profile, theme, onExit }: MiniAppProps) {
   const [board, setBoard] = useState<Piece[]>(Array(9).fill(null));
   const [turn, setTurn] = useState<'X' | 'O'>('X');
   const [multiplayer, setMultiplayer] = useState<boolean | null>(null);
+  const [coachFeedback, setCoachFeedback] = useState<TicTacToeCoachFeedback | null>(null);
+  const [showBoardReview, setShowBoardReview] = useState<boolean>(false);
 
   const [player1, setPlayer1] = useState<PlayerConfig>({
     name: profile.name || 'Player 1',
@@ -88,16 +171,24 @@ export default function TicTacToe({ profile, theme, onExit }: MiniAppProps) {
     nextBoard[i] = turn;
     setBoard(nextBoard);
 
+    // Keep the cursor on this cell so TV remote focus doesn't jump to the Back button
+    requestAnimationFrame(() => {
+      document.getElementById(`ttt-cell-${i}`)?.focus();
+    });
+
     const winCheck = winner(nextBoard);
     if (winCheck) {
       sfx.chest();
       if (winCheck === 'X') {
         awardStars(profile.id, 2);
         setScores(([s1, s2]) => [s1 + 1, s2]);
+        setCoachFeedback(null);
         void speak(`${player1.name} wins! Incredible three in a row!`);
       } else {
         setScores(([s1, s2]) => [s1, s2 + 1]);
-        void speak(`${p2Name} wins! Great game!`);
+        const coach = analyzeLoss(nextBoard, 'O', player1.name);
+        setCoachFeedback(coach);
+        void speak(`${p2Name} spotted three in a row! ${coach.spokenTip}`);
       }
       return;
     }
@@ -105,6 +196,7 @@ export default function TicTacToe({ profile, theme, onExit }: MiniAppProps) {
     if (full(nextBoard)) {
       sfx.star();
       awardStars(profile.id, 1);
+      setCoachFeedback(null);
       void speak("Cat's game! A brilliant draw from both players!");
       return;
     }
@@ -126,11 +218,13 @@ export default function TicTacToe({ profile, theme, onExit }: MiniAppProps) {
           if (botWin) {
             sfx.soft();
             setScores(([s1, s2]) => [s1, s2 + 1]);
-            const encIdx = Math.floor(Math.random() * (theme.encouragements?.length || 1));
-            void speakThemeEncouragement(theme, encIdx);
+            const coach = analyzeLoss(botBoard, 'O', player1.name);
+            setCoachFeedback(coach);
+            void speak(`${p2Name} spotted three in a row! ${coach.spokenTip}`);
           } else if (full(botBoard)) {
             sfx.star();
             awardStars(profile.id, 1);
+            setCoachFeedback(null);
             void speak('A tie! Great defense, matey!');
           } else {
             setTurn('X');
@@ -143,6 +237,11 @@ export default function TicTacToe({ profile, theme, onExit }: MiniAppProps) {
   const resetGame = () => {
     setBoard(Array(9).fill(null));
     setTurn('X');
+    setCoachFeedback(null);
+    setShowBoardReview(false);
+    setTimeout(() => {
+      document.getElementById('ttt-cell-4')?.focus();
+    }, 60);
   };
 
   if (multiplayer === null) {
@@ -186,22 +285,30 @@ export default function TicTacToe({ profile, theme, onExit }: MiniAppProps) {
 
       <div className="ttt-wrap">
         <div className="ttt-grid" role="grid" aria-label="Tic-tac-toe grid">
-          {board.map((cell, idx) => (
-            <button
-              key={idx}
-              className={`ttt-cell${cell ? ' filled' : ''}`}
-              disabled={!!cell || !!w || isDraw}
-              onClick={() => handleCellClick(idx)}
-              aria-label={`Square ${idx + 1}: ${cell ? (cell === 'X' ? player1.name : p2Name) : 'empty'}`}
-            >
-              {cell === 'X' && <span>{p1Icon}</span>}
-              {cell === 'O' && <span>{p2Icon}</span>}
-            </button>
-          ))}
+          {board.map((cell, idx) => {
+            const isWinLine = coachFeedback?.winningLine?.includes(idx);
+            const isCritical = coachFeedback?.criticalSquare === idx;
+            const extraCls = `${isWinLine ? ' win-line' : ''}${isCritical ? ' coach-critical' : ''}`;
+            return (
+              <button
+                key={idx}
+                id={`ttt-cell-${idx}`}
+                className={`ttt-cell${cell ? ' filled' : ''}${extraCls}`}
+                aria-disabled={!!cell || !!w || isDraw}
+                data-autofocus={idx === 4 ? '' : undefined}
+                onClick={() => handleCellClick(idx)}
+                aria-label={`Square ${idx + 1}: ${cell ? (cell === 'X' ? player1.name : p2Name) : 'empty'}${isCritical ? ' - key square to block' : ''}`}
+              >
+                {cell === 'X' && <span>{p1Icon}</span>}
+                {cell === 'O' && <span>{p2Icon}</span>}
+                {isCritical && !cell && <span className="coach-star-hint">🛡️</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {(w || isDraw) && (
+      {(w || isDraw) && !showBoardReview && (
         <div className="overlay">
           {w === 'X' && <Confetti />}
           <div className="card text-center pop">
@@ -220,6 +327,30 @@ export default function TicTacToe({ profile, theme, onExit }: MiniAppProps) {
                 ? 'Super defense and great turns! Ready for a rematch?'
                 : 'Both players blocked every corner! Teamwork at its finest!'}
             </p>
+
+            {w === 'O' && coachFeedback && (
+              <div className="ttt-coach-tip pop">
+                <div className="coach-badge">{coachFeedback.tipTitle}</div>
+                <p className="coach-text">{coachFeedback.tipText}</p>
+                <div className="row justify-center gap-8 mt-4">
+                  <button
+                    type="button"
+                    className="coach-hear-btn"
+                    onClick={() => void speak(coachFeedback.spokenTip)}
+                  >
+                    🔊 Hear Coach's Tip
+                  </button>
+                  <button
+                    type="button"
+                    className="coach-hear-btn"
+                    onClick={() => setShowBoardReview(true)}
+                  >
+                    🔍 Show Board
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="row justify-center mt-12 gap-8">
               <button className="btn primary big" data-autofocus onClick={resetGame}>
                 Play Again 🔁
@@ -231,6 +362,27 @@ export default function TicTacToe({ profile, theme, onExit }: MiniAppProps) {
                 Done
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {(w || isDraw) && showBoardReview && (
+        <div className="ttt-review-banner pop">
+          <div className="review-text">
+            <b>{coachFeedback?.tipTitle || '💡 Coach Board Review'}</b>
+            <span>{coachFeedback?.tipText}</span>
+          </div>
+          <div className="row gap-8">
+            <button
+              className="btn primary small"
+              data-autofocus
+              onClick={() => setShowBoardReview(false)}
+            >
+              Menu 📋
+            </button>
+            <button className="btn small" onClick={resetGame}>
+              Play Again 🔁
+            </button>
           </div>
         </div>
       )}

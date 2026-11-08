@@ -11,7 +11,7 @@ import { useEffect } from 'react';
  * 4. Exposes `window.__rlwBack()` returning boolean `true` when handled, preventing Android
  *    WebView from accidentally exiting the application.
  */
-const SELECTOR = 'button:not([disabled]), [tabindex="0"], input:not([disabled]), select:not([disabled]), a[href]';
+const SELECTOR = 'button:not([disabled]):not([tabindex="-1"]), [tabindex="0"], input:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), a[href]:not([tabindex="-1"])';
 
 export type BackHandler = () => boolean | void;
 const modalBackStack: BackHandler[] = [];

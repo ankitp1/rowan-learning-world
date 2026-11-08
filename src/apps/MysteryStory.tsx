@@ -27,9 +27,9 @@ const toQuestion = (raw: (typeof story.questions)[number], i: number): Question 
 const clean = (w: string) => w.replace(/[^a-zA-Z']/g, '').toLowerCase();
 
 /**
- * Mystery story (Missing Map): short decodable pages. Tap any word for help
- * (say it or sound it out), tap the magnifier to collect clues, then solve the
- * case with three comprehension questions that feed the skill map.
+ * Storybook Theater (The Missing Map):
+ * An animated read-along picture book for kids with auto-narration, clear
+ * TV-remote navigation, spotted clues, and a detective quiz at the end.
  */
 export default function MysteryStory({ profile, theme, onExit, onComplete }: MiniAppProps) {
   const [stage, setStage] = useState<Stage>('read');
@@ -39,16 +39,54 @@ export default function MysteryStory({ profile, theme, onExit, onComplete }: Min
   const [qi, setQi] = useState(0);
   const [right, setRight] = useState(0);
   const [bubble, setBubble] = useState('');
+  const [isNarrating, setIsNarrating] = useState(false);
   const cancel = useRef<() => void>(() => {});
   const questions = useRef(story.questions.map(toQuestion)).current;
   const pg = story.pages[page];
   const text = pg.text.replace('{name}', profile.name);
 
+  // Auto-collect clue when reaching a clue page
+  useEffect(() => {
+    if (pg.clue && !clues.includes(pg.clue)) {
+      setClues((c) => [...c, pg.clue!]);
+    }
+  }, [page, pg.clue, clues]);
+
+  // Auto-narrate the page text like an audio storybook
+  useEffect(() => {
+    cancel.current();
+    stopSpeaking();
+
+    if (stage === 'read') {
+      setIsNarrating(true);
+      const timer = setTimeout(() => {
+        void speak(text, { rate: 0.85 }).then(() => setIsNarrating(false));
+      }, 400);
+      return () => {
+        clearTimeout(timer);
+        stopSpeaking();
+        setIsNarrating(false);
+      };
+    } else if (stage === 'ask') {
+      const timer = setTimeout(() => {
+        void speak(questions[qi].prompt);
+      }, 350);
+      return () => {
+        clearTimeout(timer);
+        stopSpeaking();
+      };
+    }
+  }, [page, stage, qi, text, questions]);
+
   useEffect(() => () => { cancel.current(); stopSpeaking(); }, []);
+
   useEffect(() => {
     if (stage === 'done') {
       sfx.chest();
-      if (onComplete) { const id = setTimeout(() => onComplete({ correct: right, total: questions.length }), 1200); return () => clearTimeout(id); }
+      if (onComplete) {
+        const id = setTimeout(() => onComplete({ correct: right, total: questions.length }), 1200);
+        return () => clearTimeout(id);
+      }
     }
   }, [stage, onComplete, right, questions.length]);
 
@@ -60,13 +98,19 @@ export default function MysteryStory({ profile, theme, onExit, onComplete }: Min
     const silentE = /^[a-z]+[^aeiou]e$/.test(w) && w.length <= 5 && !['the', 'were', 'here'].includes(w);
     cancel.current = soundOut(soundsOf(w, silentE), w, undefined, 400);
   };
-  const readPage = () => { cancel.current(); void speak(text, { rate: 0.85 }); };
+
+  const readPage = () => {
+    cancel.current();
+    setIsNarrating(true);
+    void speak(text, { rate: 0.85 }).then(() => setIsNarrating(false));
+  };
+
   const getClue = () => {
     if (!pg.clue) return;
     sfx.star();
     if (!clues.includes(pg.clue)) setClues((c) => [...c, pg.clue!]);
     setBubble(`Clue found: ${pg.clue}`);
-    void speak(pg.clue);
+    void speak(`Clue found! ${pg.clue}`);
   };
 
   const onResult = (r: AnswerResult) => {
@@ -84,18 +128,35 @@ export default function MysteryStory({ profile, theme, onExit, onComplete }: Min
       <header className="topbar">
         <button className="back" onClick={onExit} aria-label="Back">⬅</button>
         <h2>{theme.mystery.emoji} {story.title}</h2>
-        <div className="clues" aria-label="clue notebook">📓 {clues.length}</div>
+        <div className="clues" aria-label="clue notebook">📓 {clues.length} {clues.length === 1 ? 'Clue' : 'Clues'}</div>
       </header>
 
       {stage === 'read' && (
         <div className="story-page">
-          <Bubble theme={theme} text={bubble || 'Read the page. Tap a word if you need help.'} />
-          <div className="story-art">{pg.art}</div>
-          <p className="story-text">
-            {text.split(' ').map((w, i) => (
-              <button key={`${page}-${i}`} className={`word${sel === w ? ' sel' : ''}`} onClick={() => setSel(w)}>{w}</button>
-            ))}
-          </p>
+          <Bubble theme={theme} text={bubble || (pg.clue ? `Look closely! There's a clue on this page!` : `Listen to the story! Page ${page + 1} of ${story.pages.length}`)} />
+          <div className="storybook-card">
+            <div className="story-page-indicator">Page {page + 1} of {story.pages.length}</div>
+            <div className="story-art">{pg.art}</div>
+            <p className="story-text">
+              {text.split(' ').map((w, i) => (
+                <button
+                  key={`${page}-${i}`}
+                  tabIndex={-1}
+                  className={`word${sel === w ? ' sel' : ''}`}
+                  onClick={() => setSel(w)}
+                >
+                  {w}
+                </button>
+              ))}
+            </p>
+            {pg.clue && (
+              <div className="spotted-clue-banner" onClick={getClue} role="status">
+                <span className="clue-icon">🔍</span>
+                <span className="clue-text"><b>Clue:</b> {pg.clue}</span>
+              </div>
+            )}
+          </div>
+
           {sel && (
             <div className="word-help">
               <b>{clean(sel)}</b>
@@ -103,20 +164,55 @@ export default function MysteryStory({ profile, theme, onExit, onComplete }: Min
               {tilesOf(clean(sel)).length > 1 && <button className="btn" onClick={sound}>🧩 Sound it out</button>}
             </div>
           )}
-          <div className="row">
-            <button className="btn" disabled={page === 0} onClick={() => { setPage(page - 1); setSel(null); setBubble(''); }}>⬅ Back</button>
-            <button className="btn" onClick={readPage}>🔊 Read to me</button>
-            {pg.clue && <button className="btn clue" onClick={getClue}>🔍 Clue</button>}
-            {page < story.pages.length - 1
-              ? <button className="btn primary" data-autofocus onClick={() => { setPage(page + 1); setSel(null); setBubble(''); }}>Next ➡</button>
-              : <button className="btn primary" data-autofocus onClick={() => { setStage('ask'); setBubble(''); }}>Solve the case! 🕵️</button>}
+
+          <div className="story-nav-row">
+            <button
+              className="btn"
+              disabled={page === 0}
+              onClick={() => { setPage(page - 1); setSel(null); setBubble(''); }}
+            >
+              ⬅ Back
+            </button>
+            <button className={`btn${isNarrating ? ' primary' : ''}`} onClick={readPage}>
+              {isNarrating ? '🔊 Listening...' : '🔊 Read to me'}
+            </button>
+            {pg.clue && (
+              <button className="btn clue" onClick={getClue}>
+                🔍 Clue
+              </button>
+            )}
+            {page < story.pages.length - 1 ? (
+              <button
+                className="btn primary"
+                data-autofocus
+                onClick={() => { setPage(page + 1); setSel(null); setBubble(''); }}
+              >
+                Next ➡
+              </button>
+            ) : (
+              <button
+                className="btn primary"
+                data-autofocus
+                onClick={() => {
+                  setStage('ask');
+                  setBubble('');
+                  void speak("Great reading! Can you help solve the mystery?");
+                }}
+              >
+                Solve the case! 🕵️
+              </button>
+            )}
           </div>
         </div>
       )}
 
       {stage === 'ask' && (
         <div className="round-body">
-          {clues.length > 0 && <div className="notebook">📓 {clues.join(' · ')}</div>}
+          {clues.length > 0 && (
+            <div className="notebook">
+              📓 <b>Clues found:</b> {clues.join(' · ')}
+            </div>
+          )}
           <QuestionCard key={questions[qi].id} q={questions[qi]} theme={theme} profile={profile} onResult={onResult} />
         </div>
       )}
@@ -125,7 +221,7 @@ export default function MysteryStory({ profile, theme, onExit, onComplete }: Min
         <div className="round-done">
           <div className="big-emoji">🕵️🎉</div>
           <h1>Case solved!</h1>
-          <p>Gus had the map. You got {right} of {questions.length}.</p>
+          <p>Gus had the map. You got {right} of {questions.length} right.</p>
           {!onComplete && <button className="btn primary" data-autofocus onClick={onExit}>All done</button>}
         </div>
       )}

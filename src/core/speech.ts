@@ -172,15 +172,27 @@ export function playCharacterAudio(themeId: string, clipKey: string): Promise<bo
       const a = new Audio(fullPath);
       activeAudio = a;
       let finished = false;
+      let guard: ReturnType<typeof setTimeout> | undefined;
+
       const done = (ok: boolean) => {
         if (!finished) {
           finished = true;
-          clearTimeout(guard);
+          if (guard) clearTimeout(guard);
           if (activeAudio === a) activeAudio = null;
           resolve(ok);
         }
       };
-      const guard = setTimeout(() => done(false), 4500);
+
+      // Safety timeout: 16s allows longest greeting (9.6s) to finish with buffer
+      guard = setTimeout(() => done(true), 16000);
+
+      a.onloadedmetadata = () => {
+        if (!finished && a.duration && !isNaN(a.duration) && isFinite(a.duration)) {
+          if (guard) clearTimeout(guard);
+          guard = setTimeout(() => done(true), a.duration * 1000 + 600);
+        }
+      };
+
       a.onended = () => done(true);
       a.onerror = () => done(false);
       const res = a.play();
@@ -234,6 +246,7 @@ export async function speakThemeEncouragement(theme: Theme, encourageIndex?: num
  * falls back to speech synthesis if audio isn't available.
  */
 export async function speakThemeGreeting(themeId: string, childName?: string, fallbackText?: string): Promise<void> {
+  stopSpeaking();
   const isRowan = Boolean(childName && /^rowan$/i.test(childName.trim()));
   const clipKey = isRowan ? 'greeting' : 'greeting_generic';
   const played = await playCharacterAudio(themeId, clipKey);
@@ -246,6 +259,7 @@ export async function speakThemeGreeting(themeId: string, childName?: string, fa
  * Plays character sample audio quote (for theme picker preview or theme switch).
  */
 export async function speakThemeSample(themeId: string, fallbackText?: string): Promise<void> {
+  stopSpeaking();
   const played = await playCharacterAudio(themeId, 'sample');
   if (!played && fallbackText) {
     await speak(fallbackText);

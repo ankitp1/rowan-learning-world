@@ -6,8 +6,12 @@ import type { MiniAppProps, Question } from '../core/types';
 import { Bubble, HelperButton, MAX_HINTS } from '../ui/QuestionCard';
 import Round, { type RoundApi } from '../ui/Round';
 
-const SWAP: Record<string, string> = { b: 'd', d: 'b', p: 'q', q: 'p', m: 'w', w: 'm', n: 'u', u: 'n', e: 'i', i: 'e', a: 'o', o: 'a' };
+const SWAP: Record<string, string> = {
+  b: 'd', d: 'b', p: 'q', q: 'p', m: 'w', w: 'm', n: 'u', u: 'n', e: 'i', i: 'e', a: 'o', o: 'a',
+  sh: 'ch', ch: 'sh', th: 'sh', ck: 'll', wh: 'th',
+};
 const CONSONANTS = 'bcdfghjklmnprstvwz'.split('');
+const DIGRAPH_EXTRAS = ['sh', 'ch', 'th', 'ck'];
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 interface Item { id: string; t: string }
@@ -15,7 +19,15 @@ interface Item { id: string; t: string }
 function makeTray(q: Question): Item[] {
   const tiles = q.tiles ?? [];
   const extra: string[] = [];
-  for (const t of tiles) { const alt = SWAP[t]; if (alt && !tiles.includes(alt) && !extra.includes(alt)) extra.push(alt); }
+  for (const t of tiles) {
+    const alt = SWAP[t];
+    if (alt && !tiles.includes(alt) && !extra.includes(alt)) extra.push(alt);
+  }
+  const hasDigraph = tiles.some((t) => DIGRAPH_EXTRAS.includes(t));
+  if (hasDigraph && extra.length < 2) {
+    const dAlt = DIGRAPH_EXTRAS.find((d) => !tiles.includes(d) && !extra.includes(d));
+    if (dAlt) extra.push(dAlt);
+  }
   while (extra.length < 2) {
     const c = CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)];
     if (!tiles.includes(c) && !extra.includes(c)) extra.push(c);
@@ -49,14 +61,36 @@ function Board({ r, props }: { r: RoundApi; props: MiniAppProps }) {
   const [busy, setBusy] = useState(false);
   const [bubble, setBubble] = useState('');
   const [drag, setDrag] = useState<{ item: Item; x: number; y: number } | null>(null);
+  const dwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const placedRef = useRef<string[]>([]);
   placedRef.current = placed;
+
+  const onDwellTile = (sound: string) => {
+    if (dwellTimer.current) clearTimeout(dwellTimer.current);
+    dwellTimer.current = setTimeout(() => {
+      void speakSound(sound);
+    }, 500);
+  };
+
+  const onLeaveTile = () => {
+    if (dwellTimer.current) {
+      clearTimeout(dwellTimer.current);
+      dwellTimer.current = null;
+    }
+  };
 
   useEffect(() => {
     alive.current = true; // StrictMode runs cleanup once in dev; re-arm
     const focusId = setTimeout(focusFirst, 60);
     const id = setTimeout(() => void speak(`Build the word. It looks like this.`), 300);
-    return () => { clearTimeout(focusId); clearTimeout(id); alive.current = false; cancel.current(); stopSpeaking(); };
+    return () => {
+      clearTimeout(focusId);
+      clearTimeout(id);
+      if (dwellTimer.current) clearTimeout(dwellTimer.current);
+      alive.current = false;
+      cancel.current();
+      stopSpeaking();
+    };
   }, []);
 
   useEffect(() => {
@@ -199,11 +233,20 @@ function Board({ r, props }: { r: RoundApi; props: MiniAppProps }) {
             data-autofocus={idx === 0 ? '' : undefined}
             className={`tile big${used.includes(it.id) ? ' used' : ''}${hidden.includes(it.id) ? ' hidden' : ''}${pulse ? ' pulse' : ''}${glow === it.id ? ' glow' : ''}${shake === it.id ? ' shake' : ''}`}
             disabled={used.includes(it.id) || hidden.includes(it.id)}
+            onFocus={() => onDwellTile(it.t)}
+            onBlur={onLeaveTile}
             onPointerDown={onDown(it)}
             onPointerMove={onMove}
             onPointerUp={onUp(it)}
             onPointerCancel={() => { startRef.current = null; setDrag(null); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pointerHandledAt.current = Date.now(); void speakSound(it.t); tryPlace(it); } }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ' || e.key === 'Select' || e.keyCode === 23) {
+                e.preventDefault();
+                pointerHandledAt.current = Date.now();
+                void speakSound(it.t);
+                tryPlace(it);
+              }
+            }}
             onClick={() => { if (Date.now() - pointerHandledAt.current > 350) { void speakSound(it.t); tryPlace(it); } }}
             aria-label={`letter ${it.t}`}
           >

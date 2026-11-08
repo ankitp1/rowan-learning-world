@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { WONDER_TRIVIA_LIBRARY, type WonderTriviaItem } from '../content/wonderTrivia';
 import { awardStars } from '../core/engine';
 import { sfx, speak, speakThemeEncouragement, speakThemePraise, stopSpeaking } from '../core/speech';
@@ -13,6 +13,40 @@ interface PlayerSetup {
 }
 
 const AVATAR_OPTIONS = ['🧒', '👧', '👦', '🧑‍🚀', '🦸', '🦊', '🐼', '🦁', '🦄', '🐯'];
+const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
+const SEEN_STORAGE_KEY_PREFIX = 'rlw_trivia_seen_';
+
+function getSeenQuestionIds(profileId: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(`${SEEN_STORAGE_KEY_PREFIX}${profileId}`);
+    if (raw) return new Set(JSON.parse(raw));
+  } catch {
+    /* ignore */
+  }
+  return new Set<string>();
+}
+
+function saveSeenQuestionId(profileId: string, id: string) {
+  try {
+    const set = getSeenQuestionIds(profileId);
+    set.add(id);
+    localStorage.setItem(`${SEEN_STORAGE_KEY_PREFIX}${profileId}`, JSON.stringify([...set]));
+  } catch {
+    /* ignore */
+  }
+}
+
+function formatTriviaSpeech(q: WonderTriviaItem, playerName?: string, isMultiplayer = false): string {
+  const intro = isMultiplayer && playerName ? `${playerName}, your turn! ` : '';
+  const mainQ = q.say ?? q.question;
+  const options = q.choices
+    .map((c, i) => {
+      const prefix = i === q.choices.length - 1 && q.choices.length > 1 ? 'or ' : '';
+      return `${prefix}${c.text}`;
+    })
+    .join(', ... ');
+  return `${intro}${mainQ} ... Is it: ${options}?`;
+}
 
 export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
   // Mode selection & 2-player setup
@@ -36,24 +70,59 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
   const [currentQuestion, setCurrentQuestion] = useState<WonderTriviaItem | null>(null);
   const [selectedChoiceIdx, setSelectedChoiceIdx] = useState<number | null>(null);
   const [answered, setAnswered] = useState<boolean>(false);
-  const [showFact, setShowFact] = useState<boolean>(false);
   const [gameOver, setGameOver] = useState<boolean>(false);
+
+  // Auto-advance countdown
+  const [autoCountdown, setAutoCountdown] = useState<number | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Session-level asked tracker to guarantee no repeats during the active game
+  const sessionAskedIdsRef = useRef<Set<string>>(new Set());
 
   const activePlayer = activePlayerIdx === 0 ? player1 : player2;
 
-  // Pick question tailored to player's age
-  const pickQuestionForAge = (age: number, avoidIds: string[] = []): WonderTriviaItem => {
-    const suitable = WONDER_TRIVIA_LIBRARY.filter(
-      (q) => age >= q.minAge && age <= q.maxAge && !avoidIds.includes(q.id)
+  const clearAutoTimer = () => {
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setAutoCountdown(null);
+  };
+
+  // Pick question tailored to player's age, preventing repeats across sessions and within the game
+  const pickQuestionForAge = (age: number): WonderTriviaItem => {
+    const suitable = WONDER_TRIVIA_LIBRARY.filter((q) => age >= q.minAge && age <= q.maxAge);
+    const seen = getSeenQuestionIds(profile.id);
+
+    // 1. Fresh questions not asked in this session AND not in persistent history
+    let candidates = suitable.filter(
+      (q) => !sessionAskedIdsRef.current.has(q.id) && !seen.has(q.id)
     );
-    const pool = suitable.length ? suitable : WONDER_TRIVIA_LIBRARY;
-    return pool[Math.floor(Math.random() * pool.length)];
+
+    // 2. If all questions in this age tier have been seen, reset history for this tier so cycle begins again
+    if (candidates.length === 0) {
+      try {
+        const suitableIds = new Set(suitable.map((q) => q.id));
+        const updated = [...seen].filter((id) => !suitableIds.has(id));
+        localStorage.setItem(`${SEEN_STORAGE_KEY_PREFIX}${profile.id}`, JSON.stringify(updated));
+      } catch {
+        /* ignore */
+      }
+      candidates = suitable.filter((q) => !sessionAskedIdsRef.current.has(q.id));
+    }
+
+    const pool = candidates.length > 0 ? candidates : suitable.length > 0 ? suitable : WONDER_TRIVIA_LIBRARY;
+    const picked = pool[Math.floor(Math.random() * pool.length)];
+
+    sessionAskedIdsRef.current.add(picked.id);
+    saveSeenQuestionId(profile.id, picked.id);
+    return picked;
   };
 
   const nextTurn = () => {
+    clearAutoTimer();
     setSelectedChoiceIdx(null);
     setAnswered(false);
-    setShowFact(false);
 
     const nextRound = currentRound + 1;
     if (nextRound >= totalQuestions) {
@@ -67,19 +136,25 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
     setActivePlayerIdx(nextPIdx);
     setCurrentRound(nextRound);
 
-    const nextQ = pickQuestionForAge(nextP.age, currentQuestion ? [currentQuestion.id] : []);
+    const nextQ = pickQuestionForAge(nextP.age);
     setCurrentQuestion(nextQ);
-    void speak(`${nextP.name}, your turn! ${nextQ.question}`);
+
+    // Read both the question AND the choices aloud
+    void speak(formatTriviaSpeech(nextQ, nextP.name, Boolean(multiplayer)));
   };
 
   const handleStartGame = () => {
+    clearAutoTimer();
+    sessionAskedIdsRef.current.clear();
     const firstQ = pickQuestionForAge(player1.age);
     setCurrentQuestion(firstQ);
     setActivePlayerIdx(0);
     setScores([0, 0]);
     setCurrentRound(0);
     setGameOver(false);
-    void speak(`${player1.name}, ready? Here is your question! ${firstQ.question}`);
+
+    // Read question AND choices aloud
+    void speak(formatTriviaSpeech(firstQ, player1.name, Boolean(multiplayer)));
   };
 
   const handleAnswer = (choiceIdx: number) => {
@@ -105,14 +180,36 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
       const encIdx = Math.floor(Math.random() * (theme.encouragements?.length || 1));
       const correctText = currentQuestion.choices.find((c) => c.correct)?.text;
       void speakThemeEncouragement(theme, encIdx).then(() => {
-        if (correctText) void speak(`The correct answer is ${correctText}.`);
+        if (correctText) void speak(`The correct answer is ${correctText}. ${currentQuestion.funFact}`);
       });
     }
-    setShowFact(true);
+
+    // Auto-advance countdown (4 seconds, giving child time to hear fact/feedback)
+    clearAutoTimer();
+    let remaining = 4;
+    setAutoCountdown(remaining);
+    countdownIntervalRef.current = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearAutoTimer();
+        nextTurn();
+      } else {
+        setAutoCountdown(remaining);
+      }
+    }, 1000);
+  };
+
+  const handleReadAloud = () => {
+    if (!currentQuestion) return;
+    stopSpeaking();
+    void speak(formatTriviaSpeech(currentQuestion, activePlayer.name, Boolean(multiplayer)));
   };
 
   useEffect(() => {
-    return () => stopSpeaking();
+    return () => {
+      clearAutoTimer();
+      stopSpeaking();
+    };
   }, []);
 
   // 1. Initial screen: Solo or 2-Player selection & Age Calibration
@@ -124,7 +221,7 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
           <h1>Wonder Trivia Quest</h1>
           <p>
             Explore real-world science, animals, space, dinosaurs, and fun riddles inspired by WonderPods!
-            Play solo or take turns with a friend or family member—questions adapt automatically to each player's age!
+            Play solo or take turns with family—questions adapt automatically to each player's age!
           </p>
           <div className="row wrap justify-center gap-12">
             <button className="btn primary big" data-autofocus onClick={() => setMultiplayer(false)}>
@@ -145,7 +242,7 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
       <GameShell title="Player Setup & Age Levels" icon="🎯" onExit={() => setMultiplayer(null)} className="wonder-trivia">
         <div className="card wonder-setup">
           <h2>🎯 Age Calibration</h2>
-          <p className="small">Questions are chosen to match each player's age so everyone has a fair and fun challenge!</p>
+          <p className="small">Questions match each player's age so everyone has a fair and fun challenge!</p>
 
           <div className="setup-grid">
             {/* Player 1 */}
@@ -189,7 +286,7 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
             )}
           </div>
 
-          <div className="row justify-center mt-12">
+          <div className="row justify-center mt-12 gap-8">
             <button className="btn primary big" data-autofocus onClick={handleStartGame}>
               🚀 Start Trivia!
             </button>
@@ -230,9 +327,9 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
             ) : (
               <p>You scored {scores[0]} of {totalQuestions}! Your curious mind is growing every day!</p>
             )}
-            <div className="row justify-center mt-12">
-              <button className="btn primary" data-autofocus onClick={handleStartGame}>
-                Play Again
+            <div className="row justify-center mt-12 gap-8">
+              <button className="btn primary big" data-autofocus onClick={handleStartGame}>
+                Play Again 🔁
               </button>
               <button className="btn" onClick={onExit}>
                 All Done
@@ -250,33 +347,51 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
       title="Wonder Trivia"
       icon="🌍"
       onExit={onExit}
-      right={`Q ${currentRound + 1} of ${totalQuestions}`}
+      right={`Q ${currentRound + 1}/${totalQuestions} · ⭐ ${scores[0]}${multiplayer ? ` - ${scores[1]}` : ''}`}
       className="wonder-trivia"
     >
-      {/* Player Turn Indicator Bar */}
-      <div className="trivia-turn-bar">
-        <div className={`turn-tag${activePlayerIdx === 0 ? ' active' : ''}`}>
-          <span>{player1.avatar} {player1.name} (Age {player1.age})</span>
-          <b>{scores[0]} ⭐</b>
-        </div>
-        {multiplayer && (
+      {/* Sleek Turn / Player Tag (visible in multiplayer or high-contrast solo) */}
+      {multiplayer && (
+        <div className="trivia-turn-bar">
+          <div className={`turn-tag${activePlayerIdx === 0 ? ' active' : ''}`}>
+            <span>{player1.avatar} {player1.name}</span>
+            <b>{scores[0]} ⭐</b>
+          </div>
           <div className={`turn-tag${activePlayerIdx === 1 ? ' active' : ''}`}>
-            <span>{player2.avatar} {player2.name} (Age {player2.age})</span>
+            <span>{player2.avatar} {player2.name}</span>
             <b>{scores[1]} ⭐</b>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {currentQuestion && (
         <div className="trivia-card card">
+          {/* Compact Top Header */}
           <div className="trivia-header">
-            <span className="trivia-cat-pill">{currentQuestion.icon} {currentQuestion.category.toUpperCase()} · Age {activePlayer.age}</span>
-            <button className="icon-btn" aria-label="Read question" onClick={() => void speak(currentQuestion.question)}>🔊</button>
+            <span className="trivia-cat-pill">
+              {currentQuestion.icon} {currentQuestion.category.toUpperCase()} · Age {activePlayer.age}
+            </span>
+            <div className="row align-center gap-8">
+              <button
+                className="icon-btn trivia-speech-btn"
+                aria-label="Read question and options aloud"
+                title="Tap to hear question and options"
+                onClick={handleReadAloud}
+              >
+                🔊 Tap to Hear
+              </button>
+            </div>
           </div>
 
+          {/* Question Text */}
           <h2 className="trivia-question">{currentQuestion.question}</h2>
 
-          <div className="choices trivia-choices">
+          {/* Options Grid (Adaptive 2-column or 3-column layout) */}
+          <div
+            className={`choices trivia-choices cols-${Math.min(currentQuestion.choices.length, 3)}`}
+            role="group"
+            aria-label="Answer options"
+          >
             {currentQuestion.choices.map((c, i) => {
               const isSelected = selectedChoiceIdx === i;
               const isCorrect = c.correct;
@@ -294,7 +409,9 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
                   disabled={answered}
                   onClick={() => handleAnswer(i)}
                   data-autofocus={i === 0 ? '' : undefined}
+                  aria-label={`Option ${OPTION_LETTERS[i]}: ${c.text}`}
                 >
+                  <span className="choice-badge">{OPTION_LETTERS[i]}</span>
                   {c.emoji && <span className="ce">{c.emoji}</span>}
                   <span className="ct font-bold">{c.text}</span>
                 </button>
@@ -302,16 +419,27 @@ export default function WonderTrivia({ profile, theme, onExit }: MiniAppProps) {
             })}
           </div>
 
-          {showFact && (
-            <div className="trivia-fact pop">
-              <span className="coach-badge">✨ Wonder Fact</span>
-              <p>{currentQuestion.funFact}</p>
-              <small className="encouragement-quote">"{currentQuestion.encouragement}"</small>
-              <div className="mt-8 text-center">
-                <button className="btn primary big" data-autofocus onClick={nextTurn}>
-                  {currentRound + 1 >= totalQuestions ? 'See Results 🏆' : 'Next Turn ➡️'}
-                </button>
+          {/* Compact Inline Feedback Bar with Auto-Advance Timer */}
+          {answered && (
+            <div className="trivia-feedback-bar pop">
+              <div className="feedback-content">
+                <span className="feedback-badge">
+                  {currentQuestion.choices[selectedChoiceIdx!]?.correct ? '🌟 Correct!' : '💡 Nice Try!'}
+                </span>
+                <p className="feedback-fact">{currentQuestion.funFact}</p>
               </div>
+              <button
+                className="btn primary next-turn-btn"
+                data-autofocus
+                onClick={() => {
+                  clearAutoTimer();
+                  nextTurn();
+                }}
+              >
+                {currentRound + 1 >= totalQuestions
+                  ? 'Results 🏆'
+                  : `Next ➡️ ${autoCountdown !== null ? `(${autoCountdown}s)` : ''}`}
+              </button>
             </div>
           )}
         </div>

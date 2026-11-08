@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { frontier } from '../core/engine';
 import { patchProfile } from '../core/db';
 import { APPS } from '../core/registry';
@@ -63,14 +63,30 @@ function helperGreeting(theme: Theme, name: string): string {
 }
 
 /** The map: one island per subject, plus the big "Start mission" button. */
-export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onGrownUps }: {
+export default function Hub({ profile, theme, lastIsland, onIsland, onMission, onSwitch, onGrownUps }: {
   profile: Profile; theme: Theme;
+  lastIsland?: IslandKey;
   onIsland: (k: IslandKey) => void; onMission: () => void; onSwitch: () => void; onGrownUps: () => void;
 }) {
   const [book, setBook] = useState(false);
   const [ageModal, setAgeModal] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const dwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onDwell = (text: string) => {
+    if (dwellTimer.current) clearTimeout(dwellTimer.current);
+    dwellTimer.current = setTimeout(() => {
+      void speak(text);
+    }, 500);
+  };
+
+  const onLeave = () => {
+    if (dwellTimer.current) {
+      clearTimeout(dwellTimer.current);
+      dwellTimer.current = null;
+    }
+  };
   const [showTour, setShowTour] = useState(() => {
     // Show on first run or if explicitly opened
     try {
@@ -144,39 +160,58 @@ export default function Hub({ profile, theme, onIsland, onMission, onSwitch, onG
           </button>
         </div>
       </header>
-      <h1 className="map-title">{theme.mapTitle.replace('{name}', profile.name)}</h1>
-      <div className="map">
-        {theme.decor.map((d, i) => <span key={i} className={`decor d${i}`} aria-hidden>{d}</span>)}
-        <div
-          className="hub-helper"
-          role="button"
-          tabIndex={0}
-          onClick={() => void speakThemeGreeting(theme.id, profile.name, helperGreeting(theme, profile.name))}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void speakThemeGreeting(theme.id, profile.name, helperGreeting(theme, profile.name)); } }}
-          title={`Click to hear ${theme.helper.name}`}
-          style={{ cursor: 'pointer' }}
+      {/* Straight-line Two-Tier Layout (Page 5 design spec) */}
+      <div className="hub-grid-layout">
+        {/* Row 1: Today's Mission Card - Focused by default */}
+        <button
+          className="hub-mission-card"
+          data-autofocus={!lastIsland ? '' : undefined}
+          onClick={onMission}
+          onFocus={() => onDwell(`Today's Mission: ${theme.mapTitle.replace('{name}', profile.name)}`)}
+          onBlur={onLeave}
+          aria-label={`Start a mission - Today's Mission: ${theme.mapTitle.replace('{name}', profile.name)}`}
         >
-          <HelperAvatar theme={theme} size={114} talking />
-          <div className="bubble">
-            <p>{helperGreeting(theme, profile.name)}</p>
-            <span style={{ display: 'block', fontSize: '11px', opacity: 0.65, marginTop: '2px' }}>🔊 Tap to hear</span>
+          <div className="mission-art-box">
+            <span className="mission-badge-emoji">{theme.pieces[0]}</span>
+            <span className="mission-map-icon">🗺️</span>
           </div>
-        </div>
-        <button className="mission-btn" data-autofocus onClick={onMission}>
-          <span className="m-emoji">{theme.pieces[0]}</span>
-          <span>Start a mission!</span>
+          <div className="mission-details">
+            <span className="mission-tag">Today's Mission</span>
+            <h2 className="mission-title">{theme.mapTitle.replace('{name}', profile.name)}</h2>
+            <div className="mission-dots" aria-label="Activities in this mission">
+              <span className="m-dot done"></span>
+              <span className="m-dot done"></span>
+              <span className="m-dot"></span>
+              <span className="m-dot"></span>
+            </div>
+          </div>
+          <div className="mission-play-prompt">
+            <span className="play-triangle">▶</span>
+            <b>Start a mission</b>
+          </div>
         </button>
-        <div className="islands-wrap">
-          <MapTrail themeId={theme.id} />
-          <div className="islands">
-            {shown.map((i) => (
-              <button key={i.key} className={`island ${i.key}`} onClick={() => onIsland(i.key)}>
+
+        {/* Row 2: The Islands in One Straight Row */}
+        <div className="hub-islands-row" role="region" aria-label="Islands">
+          {shown.map((i) => (
+            <button
+              key={i.key}
+              id={`island-btn-${i.key}`}
+              data-autofocus={lastIsland === i.key ? '' : undefined}
+              className={`hub-island-tile ${i.key}`}
+              onClick={() => onIsland(i.key)}
+              onFocus={() => onDwell(`${i.name} Island`)}
+              onBlur={onLeave}
+              aria-label={`${i.name} Island`}
+            >
+              <span className="tile-category">{i.key.toUpperCase()}</span>
+              <div className="tile-art-wrap">
                 <IslandBase themeId={theme.id} tone={TONE[theme.id]?.[i.key] ?? '#f6d98a'} />
-                <span className="i-emoji">{i.emoji}</span>
-                <span className="i-name">{i.name}</span>
-              </button>
-            ))}
-          </div>
+                <span className="tile-emoji">{i.emoji}</span>
+              </div>
+              <span className="tile-title">{i.name}</span>
+            </button>
+          ))}
         </div>
       </div>
       {book && <StickerBook profile={profile} theme={theme} onClose={() => setBook(false)} />}

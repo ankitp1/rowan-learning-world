@@ -44,6 +44,7 @@ export default function App() {
   const [route, setRoute] = useState<Route>(start.route);
   const [pid, setPid] = useState<string | undefined>(start.pid);
   const [gate, setGate] = useState(false);
+  const [lastIsland, setLastIsland] = useState<IslandKey | undefined>();
   const profile = db.profiles.find((p) => p.id === pid);
   const theme = themeById(profile?.themeId ?? 'pirate');
 
@@ -109,14 +110,15 @@ export default function App() {
     body = (
       <Hub
         profile={profile} theme={theme}
-        onIsland={(key) => setRoute({ name: 'island', key })}
+        lastIsland={lastIsland}
+        onIsland={(key) => { setLastIsland(key); setRoute({ name: 'island', key }); }}
         onMission={() => setRoute({ name: 'mission' })}
         onSwitch={() => setRoute({ name: 'who' })}
         onGrownUps={() => setGate(true)}
       />
     );
   } else if (route.name === 'island') {
-    body = <IslandMenu island={route.key} profile={profile} theme={theme} onPlay={(appId) => setRoute({ name: 'play', appId, from: route.key })} onBack={back} />;
+    body = <IslandMenu island={route.key} profile={profile} theme={theme} onPlay={(appId) => { setLastIsland(route.key); setRoute({ name: 'play', appId, from: route.key }); }} onBack={back} />;
   } else if (route.name === 'mission') {
     body = <Mission profile={profile} theme={theme} onExit={() => setRoute({ name: 'hub' })} />;
   } else {
@@ -132,7 +134,11 @@ export default function App() {
   return (
     <div className={`app theme-${theme.id}${route.name === 'parent' ? ' light' : ''}`}>
       {route.name !== 'parent' && <Scenery themeId={theme.id} />}
-      {body}
+      <div id="stage" className="stage-canvas">
+        <div className="stage-safe-area">
+          {body}
+        </div>
+      </div>
       {playing && <TimeGuard profile={profile} onGrownUps={() => setGate(true)} onSwitch={() => setRoute({ name: 'who' })} />}
       {gate && <Gate onCancel={() => setGate(false)} onPass={() => { setGate(false); setRoute({ name: 'parent' }); }} />}
     </div>
