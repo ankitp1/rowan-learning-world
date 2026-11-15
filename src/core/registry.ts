@@ -85,6 +85,11 @@ export const APPS: MiniApp[] = [
     component: lazy(() => import('../apps/WonderTrivia')),
   },
   {
+    id: 'world-explorer', title: 'World Explorer', subject: 'games', icon: '🗺️',
+    blurb: 'Explore continents, oceans, and landmarks with maps', skills: [],
+    component: lazy(() => import('../apps/WorldExplorer')),
+  },
+  {
     id: 'maze', title: 'Number Maze', subject: 'games', icon: '🌀',
     blurb: 'Collect 1, 2, 3 in order, then escape', skills: [],
     component: lazy(() => import('../apps/Maze')),

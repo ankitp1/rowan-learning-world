@@ -88,12 +88,27 @@ export function countSeq(q: Question): number[] {
   }
 }
 
-export function MathVisual({ q, theme, hi, hintLevel = 0 }: { q: Question; theme: Theme; hi: number | null; hintLevel?: number }) {
+export function MathVisual({
+  q,
+  theme,
+  hi,
+  hintLevel = 0,
+  onCount,
+  isCounting = false,
+}: {
+  q: Question;
+  theme: Theme;
+  hi: number | null;
+  hintLevel?: number;
+  onCount?: () => void;
+  isCounting?: boolean;
+}) {
   const e = theme.id;
   const lit = (cap: number, offset = 0) => (hi === null ? undefined : Math.max(0, Math.min(cap, hi - offset)));
   const a = q.a ?? 0;
   const b = q.b ?? 0;
   const showCoach = hintLevel > 0;
+  const [viewMode, setViewMode] = useState<'counters' | 'line'>(q.support === 1 ? 'line' : 'counters');
 
   switch (q.kind) {
     case 'count': {
@@ -101,6 +116,18 @@ export function MathVisual({ q, theme, hi, hintLevel = 0 }: { q: Question; theme
       return (
         <div className="math-wrap">
           <CoinGrid n={n} themeId={e} lit={lit(n)} />
+          {onCount && (
+            <div className="math-scaffold-row">
+              <button
+                type="button"
+                className={`scaffold-btn${isCounting ? ' active' : ''}`}
+                onClick={onCount}
+                aria-label="Count together with the helper"
+              >
+                <span>🖐️ Count with Me!</span>
+              </button>
+            </div>
+          )}
           {showCoach && (
             <div className="math-coach pop" role="region" aria-label="Math strategy cue">
               <span className="coach-badge">🧠 Easy Trick</span>
@@ -117,13 +144,27 @@ export function MathVisual({ q, theme, hi, hintLevel = 0 }: { q: Question; theme
     case 'compare':
       return (
         <div className="math-wrap">
-          {q.support === 2 && !showCoach ? (
-            <div className="bignum">{a} <span>?</span> {b}</div>
-          ) : (
-            <div className="piles">
+          <div className="piles">
+            <div className="pile-side">
+              <div className="bignum-mini">{a}</div>
               <CoinGrid n={a} themeId={e} lit={lit(a)} />
-              <span className="vs">vs</span>
+            </div>
+            <span className="vs">vs</span>
+            <div className="pile-side">
+              <div className="bignum-mini">{b}</div>
               <CoinGrid n={b} themeId={e} lit={lit(b, a)} alt />
+            </div>
+          </div>
+          {onCount && (
+            <div className="math-scaffold-row">
+              <button
+                type="button"
+                className={`scaffold-btn${isCounting ? ' active' : ''}`}
+                onClick={onCount}
+                aria-label="Count piles together"
+              >
+                <span>🖐️ Count with Me!</span>
+              </button>
             </div>
           )}
           {showCoach && (
@@ -142,17 +183,59 @@ export function MathVisual({ q, theme, hi, hintLevel = 0 }: { q: Question; theme
       const rest = small - to10;
       return (
         <div className="math-wrap">
-          {q.support === 2 && !showCoach && <div className="bignum">{a} + {b}</div>}
-          {(q.support === 1 || (showCoach && q.support === 2)) && (
+          {/* Prominent Equation */}
+          <div className="bignum">{a} + {b}</div>
+
+          {/* Visual Scaffolding Controls */}
+          <div className="math-scaffold-row">
+            {onCount && (
+              <button
+                type="button"
+                className={`scaffold-btn${isCounting ? ' active' : ''}`}
+                onClick={onCount}
+                aria-label="Count together with the helper"
+              >
+                <span>🖐️ Count with Me!</span>
+              </button>
+            )}
+            <button
+              type="button"
+              className={`scaffold-btn${viewMode === 'counters' ? ' active' : ''}`}
+              onClick={() => setViewMode('counters')}
+              aria-label="Show countable gems"
+            >
+              <span>🪙 Counters</span>
+            </button>
+            <button
+              type="button"
+              className={`scaffold-btn${viewMode === 'line' ? ' active' : ''}`}
+              onClick={() => setViewMode('line')}
+              aria-label="Show number line hops"
+            >
+              <span>📏 Number Line</span>
+            </button>
+          </div>
+
+          {/* Concrete Visual Representation */}
+          {viewMode === 'line' ? (
             <NumberLine from={a} dir={1} steps={b} hi={hi === null ? null : Math.max(0, hi - a)} />
-          )}
-          {(q.support === 0 || showCoach) && (
+          ) : crossing10 && (showCoach || hintLevel > 0) ? (
+            <div className="tenframe-stack">
+              <TenFrame filled={big} extra={to10} themeId={e} />
+              <div className="piles mt-8">
+                <CoinGrid n={a} themeId={e} lit={lit(a)} />
+                <span className="vs">+</span>
+                <CoinGrid n={b} themeId={e} lit={lit(b, a)} alt offset={a} />
+              </div>
+            </div>
+          ) : (
             <div className="piles">
               <CoinGrid n={a} themeId={e} lit={lit(a)} />
               <span className="vs">+</span>
               <CoinGrid n={b} themeId={e} lit={lit(b, a)} alt offset={a} />
             </div>
           )}
+
           {showCoach && (
             <div className="math-coach pop" role="region" aria-label="Mental math strategy">
               {crossing10 ? (
@@ -191,16 +274,49 @@ export function MathVisual({ q, theme, hi, hintLevel = 0 }: { q: Question; theme
     case 'sub': {
       return (
         <div className="math-wrap">
-          {q.support === 2 && !showCoach && <div className="bignum">{a} − {b}</div>}
-          {(q.support === 1 || (showCoach && q.support === 2)) && (
+          {/* Prominent Equation */}
+          <div className="bignum">{a} − {b}</div>
+
+          {/* Visual Scaffolding Controls */}
+          <div className="math-scaffold-row">
+            {onCount && (
+              <button
+                type="button"
+                className={`scaffold-btn${isCounting ? ' active' : ''}`}
+                onClick={onCount}
+                aria-label="Count remaining items together"
+              >
+                <span>🖐️ Count with Me!</span>
+              </button>
+            )}
+            <button
+              type="button"
+              className={`scaffold-btn${viewMode === 'counters' ? ' active' : ''}`}
+              onClick={() => setViewMode('counters')}
+              aria-label="Show countable items"
+            >
+              <span>🪙 Counters</span>
+            </button>
+            <button
+              type="button"
+              className={`scaffold-btn${viewMode === 'line' ? ' active' : ''}`}
+              onClick={() => setViewMode('line')}
+              aria-label="Show number line"
+            >
+              <span>📏 Number Line</span>
+            </button>
+          </div>
+
+          {/* Concrete Visual Representation */}
+          {viewMode === 'line' ? (
             <NumberLine from={a} dir={-1} steps={b} hi={hi} />
-          )}
-          {(q.support === 0 || showCoach) && (
+          ) : (
             <div className="piles">
               <CoinGrid n={a} themeId={e} gone={b} lit={lit(a - b)} />
               <span className="thief">{theme.thief.emoji}<small>takes {b}</small></span>
             </div>
           )}
+
           {showCoach && (
             <div className="math-coach pop" role="region" aria-label="Subtraction mental math strategy">
               <span className="coach-badge">🧠 Count Back {b} Steps!</span>
@@ -225,10 +341,19 @@ export function MathVisual({ q, theme, hi, hintLevel = 0 }: { q: Question; theme
     case 'make10':
       return (
         <div className="math-wrap">
-          {q.support === 2 && !showCoach ? (
-            <div className="bignum">{a} + ? = 10</div>
-          ) : (
-            <TenFrame filled={a} extra={showCoach ? (hi ?? 10 - a) : hi} themeId={e} />
+          <div className="bignum">{a} + ? = 10</div>
+          <TenFrame filled={a} extra={showCoach ? (hi ?? 10 - a) : hi} themeId={e} />
+          {onCount && (
+            <div className="math-scaffold-row">
+              <button
+                type="button"
+                className={`scaffold-btn${isCounting ? ' active' : ''}`}
+                onClick={onCount}
+                aria-label="Count missing spaces to reach 10"
+              >
+                <span>🖐️ Count with Me!</span>
+              </button>
+            </div>
           )}
           {showCoach && (
             <div className="math-coach pop" role="region" aria-label="Make 10 strategy">

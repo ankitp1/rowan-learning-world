@@ -452,6 +452,9 @@ input, select { font: inherit; padding: 10px 14px; border-radius: 16px; border: 
 .piles { display: flex; gap: 26px; align-items: center; justify-content: center; flex-wrap: wrap; background: var(--panel); border: 3px solid rgba(255,255,255,.35); border-radius: 30px; padding: 14px 24px; }
 .vs { font-size: 58px; font-weight: 800; } .thief { font-size: 84px; display: flex; flex-direction: column; align-items: center; } .thief small { font-size: 26px; font-weight: 800; }
 .bignum { font-size: 130px; font-weight: 800; text-shadow: 0 4px 0 rgba(0,0,0,.25); } .bignum span { color: var(--primary); }
+.bignum-mini { font-size: 48px; font-weight: 800; color: var(--primary, #FFD36A); text-shadow: 0 3px 0 rgba(0,0,0,.4); text-align: center; margin-bottom: 6px; }
+.pile-side { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tenframe-stack { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .numline { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: 100%; background: var(--panel); border-radius: 26px; padding: 12px; }
 .nl { min-width: 54px; height: 64px; display: inline-flex; align-items: center; justify-content: center; border-radius: 14px; background: rgba(255,255,255,.22); font-weight: 800; font-size: 32px; }
 .nl.start { background: #fff; color: var(--text); } .nl.path { background: rgba(255,255,255,.5); } .nl.lit { background: var(--primary); color: #1a1a1a; transform: scale(1.14); }
@@ -629,8 +632,8 @@ input, select { font: inherit; padding: 10px 14px; border-radius: 16px; border: 
 .prize { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 
 /* ---------- maze ---------- */
-.maze-wrap { display: flex; gap: 30px; align-items: center; justify-content: center; flex-wrap: wrap; }
-.maze-svg { width: min(92vw, 56vh); height: auto; aspect-ratio: 1; touch-action: none; filter: drop-shadow(0 14px 18px rgba(0,0,0,.4)); }
+.maze-wrap { display: flex; gap: 24px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.maze-svg { width: min(88vmin, 740px); height: min(88vmin, 740px); max-width: 740px; max-height: 740px; aspect-ratio: 1; touch-action: none; filter: drop-shadow(0 14px 18px rgba(0,0,0,.4)); flex-shrink: 0; }
 .maze-frame { fill: var(--frame); } .maze-floor { fill: var(--floor); }
 .maze-walls { stroke: var(--wall); stroke-width: .14; stroke-linecap: round; fill: none; }
 .maze-trail { fill: none; stroke: var(--primary); stroke-width: .3; stroke-linecap: round; stroke-linejoin: round; opacity: .55; }
@@ -645,6 +648,10 @@ input, select { font: inherit; padding: 10px 14px; border-radius: 16px; border: 
 .dpad { display: grid; grid-template-columns: repeat(3, 78px); grid-template-rows: repeat(3, 78px); gap: 6px; }
 .dpad button { background: var(--gloss), rgba(255,255,255,.35); border: 2px solid rgba(255,255,255,.5); border-radius: 22px; font-size: 32px; color: #fff; box-shadow: 0 5px 0 rgba(0,0,0,.2); }
 .dpad .up { grid-column: 2; grid-row: 1; } .dpad .left { grid-column: 1; grid-row: 2; } .dpad .right { grid-column: 3; grid-row: 2; } .dpad .down { grid-column: 2; grid-row: 3; }
+[data-device="tv"] .dpad,
+[data-device="desktop"] .dpad {
+  display: none !important;
+}
 .maze-status { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .chip { width: 50px; height: 50px; border-radius: 50%; background: var(--panel); border: 2px solid rgba(255,255,255,.4); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 24px; }
 .chip.got { background: var(--primary); color: #1a1a1a; } .chip.next { outline: 4px solid #fff; }
@@ -1238,6 +1245,142 @@ table.skills { width: 100%; border-collapse: collapse; font-size: 16px; } table.
 .multiplayer-scores { display: flex; flex-direction: column; gap: 8px; align-items: center; }
 .score-badge { display: flex; gap: 14px; font-size: 22px; font-weight: 700; background: rgba(0,0,0,.06); padding: 8px 24px; border-radius: 999px; }
 
+/* ---------- geography & world map explorer ---------- */
+.world-explorer {
+  width: 100%;
+}
+.geo-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.geo-header-card {
+  padding: 12px 20px;
+  margin: 0;
+}
+.geo-clue-badge {
+  font-size: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+.geo-tag {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--primary);
+  display: block;
+  margin-bottom: 2px;
+}
+.geo-question-text {
+  font-size: clamp(20px, 2.4vw, 28px);
+  margin: 0;
+  line-height: 1.25;
+  font-weight: 800;
+}
+.geo-map-wrap {
+  width: 100%;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  border: 4px solid rgba(255, 255, 255, 0.35);
+  background: #0d283e;
+}
+.geo-map-svg {
+  width: 100%;
+  height: auto;
+  max-height: 48vh;
+  display: block;
+}
+.geo-ocean-label {
+  fill: rgba(147, 197, 253, 0.55);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.geo-continent-group {
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.geo-continent-group:hover,
+.geo-continent-group:focus-visible {
+  outline: none;
+}
+.geo-continent-path {
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  transition: all 0.25s ease;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45));
+}
+.geo-continent-group:hover .geo-continent-path,
+.geo-continent-group.active .geo-continent-path {
+  stroke: #FFD36A;
+  stroke-width: 4.5;
+  filter: drop-shadow(0 0 18px rgba(255, 211, 106, 0.85));
+}
+.geo-pin-bg {
+  fill: rgba(8, 14, 28, 0.8);
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+.geo-pin-icon {
+  font-size: 18px;
+  dominant-baseline: central;
+}
+.geo-pin-label {
+  fill: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+}
+.geo-target-beacon {
+  pointer-events: none;
+}
+.beacon-pulse {
+  fill: none;
+  stroke: #FFD36A;
+  stroke-width: 4;
+  opacity: 0.8;
+  animation: pulse 1.2s infinite ease-in-out;
+}
+.beacon-dot {
+  fill: #FFD36A;
+  stroke: #ffffff;
+  stroke-width: 3;
+}
+.geo-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+@media (max-width: 680px) {
+  .geo-choices {
+    grid-template-columns: 1fr;
+  }
+}
+.tv-mode .geo-layout {
+  max-width: 1360px !important;
+}
+.tv-mode .geo-map-svg {
+  width: 100% !important;
+  max-width: 1100px !important;
+  height: 500px !important;
+  max-height: 520px !important;
+}
+
 /* ---------- welcome tour onboarding ---------- */
 .welcome-tour-card { max-width: 680px; width: 92%; max-height: 90vh; overflow-y: auto; text-align: center; padding: 22px; }
 .tour-helper-banner { display: flex; align-items: center; gap: 12px; justify-content: center; margin-bottom: 8px; }
@@ -1787,4 +1930,111 @@ table.skills { width: 100%; border-collapse: collapse; font-size: 16px; } table.
   padding: 0 !important;
   overflow: hidden !important;
 }
+
+/* TV Number Maze Hero Sizing */
+.tv-mode .screen.maze {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  height: 100% !important;
+  max-height: 972px !important;
+  padding: 8px 32px 12px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.tv-mode .maze-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  gap: 0 !important;
+}
+
+.tv-mode .maze-wrap .dpad {
+  display: none !important;
+}
+
+.tv-mode .maze-svg {
+  width: 740px !important;
+  height: 740px !important;
+  max-width: 740px !important;
+  max-height: 740px !important;
+  aspect-ratio: 1 !important;
+  margin: 0 auto !important;
+  flex-shrink: 0 !important;
+}
+
+.tv-mode .maze-status {
+  margin-top: 8px !important;
+  gap: 16px !important;
+}
+
+.tv-mode .chip {
+  width: 56px !important;
+  height: 56px !important;
+  font-size: 26px !important;
+}
+
+.tv-mode .chip-btn {
+  padding: 10px 24px !important;
+  font-size: 22px !important;
+  border-radius: 16px !important;
+}
+
+/* Math Scaffolding & Visual Manipulatives */
+.math-scaffold-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 10px 0 6px;
+  flex-wrap: wrap;
+}
+
+.scaffold-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 20px;
+  background: var(--panel, #16364d);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+  font-size: 19px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
+}
+
+.scaffold-btn:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.scaffold-btn.active {
+  background: #FFD36A;
+  color: #1a1a1a;
+  border-color: #fff;
+  box-shadow: 0 0 16px rgba(255, 211, 106, 0.6);
+}
+
+.tv-mode .scaffold-btn {
+  font-size: 22px !important;
+  padding: 10px 24px !important;
+  border-radius: 24px !important;
+}
+
+.tv-mode .scaffold-btn:focus,
+.tv-mode .scaffold-btn:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 4px var(--sea, #0d3b4c), 0 0 0 12px #FFD36A, 0 12px 30px rgba(255, 211, 106, 0.7) !important;
+  transform: translateY(-4px) scale(1.06) !important;
+}
+
 

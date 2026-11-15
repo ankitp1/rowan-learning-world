@@ -152,12 +152,43 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
   };
 
   const runCount = async () => {
-    const seq = countSeq(q);
-    for (let i = 0; i < seq.length; i++) {
-      if (!alive.current) return;
-      setHi(i + 1);
-      await speak(String(seq[i]), { rate: 0.9 });
-      await sleep(250);
+    cancel.current();
+    if (q.kind === 'add') {
+      const a = q.a ?? 0;
+      const b = q.b ?? 0;
+      const total = a + b;
+      await speak(`Let's count together! We have ${a}... now let's add ${b} more!`);
+      for (let i = 0; i < total; i++) {
+        if (!alive.current) return;
+        setHi(i + 1);
+        await speak(String(i + 1), { rate: 0.95 });
+        await sleep(220);
+      }
+      if (alive.current) {
+        await speak(`${a} plus ${b} makes ${total}!`);
+      }
+    } else if (q.kind === 'sub') {
+      const a = q.a ?? 0;
+      const b = q.b ?? 0;
+      const remain = a - b;
+      await speak(`We have ${a}... take away ${b}! How many are left? Let's count!`);
+      for (let i = 0; i < remain; i++) {
+        if (!alive.current) return;
+        setHi(i + 1);
+        await speak(String(i + 1), { rate: 0.95 });
+        await sleep(220);
+      }
+      if (alive.current) {
+        await speak(`${remain} are left!`);
+      }
+    } else {
+      const seq = countSeq(q);
+      for (let i = 0; i < seq.length; i++) {
+        if (!alive.current) return;
+        setHi(i + 1);
+        await speak(String(seq[i]), { rate: 0.9 });
+        await sleep(250);
+      }
     }
   };
 
@@ -311,7 +342,7 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
     }
     if (q.kind === 'follow') return null;
     if (variant === 'bridge' && q.kind === 'make10') return <BridgeVisual a={q.a ?? 0} gap={q.b ?? 0} pick={reveal ? (q.b ?? 0) : lastPick} />;
-    return <MathVisual q={q} theme={theme} hi={hi} hintLevel={level} />;
+    return <MathVisual q={q} theme={theme} hi={hi} hintLevel={level} onCount={runCount} isCounting={hi !== null} />;
   })();
 
   // Register voice command & spoken-answer matcher for this question
