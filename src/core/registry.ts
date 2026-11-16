@@ -90,6 +90,21 @@ export const APPS: MiniApp[] = [
     component: lazy(() => import('../apps/FlagCapitalTrivia')),
   },
   {
+    id: 'complete-the-flag', title: 'Complete the Flag', subject: 'games', icon: '🧩',
+    blurb: 'Slot in the missing piece or stripe to finish world flags', skills: [],
+    component: lazy(() => import('../apps/CompleteTheFlag')),
+  },
+  {
+    id: 'geo-detective', title: 'Where in the World?', subject: 'games', icon: '🕵️',
+    blurb: 'Follow clues across famous cities to catch the sneaky suspect', skills: [],
+    component: lazy(() => import('../apps/GeoDetective')),
+  },
+  {
+    id: 'passport', title: 'Travel Passport', subject: 'games', icon: '🛂',
+    blurb: 'View and inspect all your collected world country stamps', skills: [],
+    component: lazy(() => import('../apps/PassportBook')),
+  },
+  {
     id: 'world-explorer', title: 'World Explorer', subject: 'games', icon: '🗺️',
     blurb: 'Explore continents, oceans, and landmarks with maps', skills: [],
     component: lazy(() => import('../apps/WorldExplorer')),

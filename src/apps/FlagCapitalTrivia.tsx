@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FLAG_CAPITAL_LIBRARY, type FlagCapitalItem } from '../content/flagsCapitals';
 import { awardStars } from '../core/engine';
+import { awardPassportStamp } from '../core/passport';
 import { sfx, speak, speakThemeEncouragement, speakThemePraise, stopSpeaking } from '../core/speech';
 import type { MiniAppProps } from '../core/types';
 import { Confetti } from '../ui/Art';
@@ -183,6 +184,16 @@ export default function FlagCapitalTrivia({ profile, theme, onExit, onComplete }
         return next;
       });
       awardStars(profile.id, 1);
+      awardPassportStamp(
+        profile.id,
+        currentQuestion.country,
+        currentQuestion.flagEmoji,
+        currentQuestion.continent,
+        currentQuestion.icon,
+        undefined,
+        'Flags & Capitals',
+        currentQuestion.funFact
+      );
     } else {
       sfx.soft();
     }
