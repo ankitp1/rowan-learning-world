@@ -20,11 +20,11 @@ export function WelcomeTourModal({ theme, childName, onFinish }: WelcomeTourProp
 
   const steps = [
     {
-      title: `Welcome to Rowan's Learning World! 🌊✨`,
+      title: `Welcome to ${childName}'s Learning World! 🌊✨`,
       icon: '🗺️',
       subtitle: `A magical adaptive universe made just for ${childName}!`,
       text: `Every activity here grows and adapts with your child—from phonics and reading comprehension to mental math, number bonds, and brain-teasing puzzles.`,
-      say: `Welcome to Rowan's Learning World! I am ${theme.helper.name}, and I am so excited to explore with you!`,
+      say: `Welcome to ${childName}'s Learning World! I am ${theme.helper.name}, and I am so excited to explore with you!`,
     },
     {
       title: '5 Themed Islands to Explore 🏝️',

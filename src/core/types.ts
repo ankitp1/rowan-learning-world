@@ -85,6 +85,7 @@ export interface Profile {
   settings: ProfileSettings;
   createdAt: number;
   updatedAt?: number;
+  createdOnDeviceId?: string;
 }
 
 export interface Theme {

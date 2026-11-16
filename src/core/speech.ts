@@ -209,49 +209,64 @@ export function playCharacterAudio(themeId: string, clipKey: string): Promise<bo
  * Speaks character praise: plays pre-rendered neural character audio clip first;
  * falls back to speech synthesis if audio isn't available.
  */
-export async function speakThemePraise(theme: Theme, praiseIndex?: number): Promise<void> {
+export async function speakThemePraise(theme: Theme, praiseIndex?: number, childName?: string): Promise<void> {
   const praises = theme.praise || [];
   const idx = praiseIndex !== undefined ? praiseIndex : Math.floor(Math.random() * (praises.length || 1));
-  const played = await playCharacterAudio(theme.id, `praise_${idx}`);
-  if (!played) {
-    const text = praises[idx] || 'Great job!';
-    await speak(text, {
-      pitch: theme.helper?.voiceStyle?.pitch,
-      rate: theme.helper?.voiceStyle?.rate,
-      voiceNamePattern: theme.helper?.voiceStyle?.voiceNamePattern,
-    });
+  const name = childName?.trim() || 'friend';
+  const rawText = praises[idx] || 'Great job, {name}!';
+  const text = rawText.replace(/\{name\}/g, name);
+  const isRowan = /^rowan$/i.test(name);
+
+  if (isRowan) {
+    const played = await playCharacterAudio(theme.id, `praise_${idx}`);
+    if (played) return;
   }
+
+  await speak(text, {
+    pitch: theme.helper?.voiceStyle?.pitch,
+    rate: theme.helper?.voiceStyle?.rate,
+    voiceNamePattern: theme.helper?.voiceStyle?.voiceNamePattern,
+  });
 }
 
 /**
- * Speaks character encouragement: plays pre-rendered neural character audio clip first;
- * falls back to speech synthesis if audio isn't available.
+ * Speaks character encouragement: plays pre-rendered neural character audio clip first for Rowan,
+ * or synthesizes personal speech with the child's exact name.
  */
-export async function speakThemeEncouragement(theme: Theme, encourageIndex?: number): Promise<void> {
+export async function speakThemeEncouragement(theme: Theme, encourageIndex?: number, childName?: string): Promise<void> {
   const list = theme.encouragements || [];
   const idx = encourageIndex !== undefined ? encourageIndex : Math.floor(Math.random() * (list.length || 1));
-  const played = await playCharacterAudio(theme.id, `encourage_${idx}`);
-  if (!played) {
-    const text = list[idx] || "You've got this! Let's try again.";
-    await speak(text, {
-      pitch: theme.helper?.voiceStyle?.pitch,
-      rate: theme.helper?.voiceStyle?.rate,
-      voiceNamePattern: theme.helper?.voiceStyle?.voiceNamePattern,
-    });
+  const name = childName?.trim() || 'friend';
+  const rawText = list[idx] || "You've got this, {name}! Let's try again.";
+  const text = rawText.replace(/\{name\}/g, name);
+  const isRowan = /^rowan$/i.test(name);
+
+  if (isRowan) {
+    const played = await playCharacterAudio(theme.id, `encourage_${idx}`);
+    if (played) return;
   }
+
+  await speak(text, {
+    pitch: theme.helper?.voiceStyle?.pitch,
+    rate: theme.helper?.voiceStyle?.rate,
+    voiceNamePattern: theme.helper?.voiceStyle?.voiceNamePattern,
+  });
 }
 
 /**
- * Speaks character greeting: plays pre-rendered neural character audio clip first;
- * falls back to speech synthesis if audio isn't available.
+ * Speaks character greeting: plays pre-rendered neural character audio clip first for Rowan;
+ * speaks personal greeting with the child's name for other children.
  */
 export async function speakThemeGreeting(themeId: string, childName?: string, fallbackText?: string): Promise<void> {
   stopSpeaking();
   const isRowan = Boolean(childName && /^rowan$/i.test(childName.trim()));
-  const clipKey = isRowan ? 'greeting' : 'greeting_generic';
-  const played = await playCharacterAudio(themeId, clipKey);
-  if (!played && fallbackText) {
-    await speak(fallbackText);
+  if (isRowan) {
+    const played = await playCharacterAudio(themeId, 'greeting');
+    if (played) return;
+  }
+  if (fallbackText) {
+    const name = childName?.trim() || 'friend';
+    await speak(fallbackText.replace(/\{name\}/g, name));
   }
 }
 

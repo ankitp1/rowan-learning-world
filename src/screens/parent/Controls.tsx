@@ -1,4 +1,5 @@
-import { patchProfile, update } from '../../core/db';
+import { useState } from 'react';
+import { addDeviceProfileId, isProfileActiveOnDevice, patchProfile, removeDeviceProfileId, update } from '../../core/db';
 import { applyAgeCalibration, defaultStagesForAge, frontier, resetSkill, setLevel, statesOf, statusOf, STATUS_LABEL } from '../../core/engine';
 import { APPS } from '../../core/registry';
 import { ladder, skillsOf } from '../../core/skills';
@@ -71,6 +72,17 @@ export default function Controls({ profile, onPlacement }: { profile: Profile; o
   const curReading = profile.readingStage ?? curDefs.readingStage;
   const curMath = profile.mathStage ?? curDefs.mathStage;
 
+  const [activeOnDevice, setActiveOnDevice] = useState(() => isProfileActiveOnDevice(profile.id));
+  const toggleDeviceActive = () => {
+    if (activeOnDevice) {
+      removeDeviceProfileId(profile.id);
+      setActiveOnDevice(false);
+    } else {
+      addDeviceProfileId(profile.id);
+      setActiveOnDevice(true);
+    }
+  };
+
   return (
     <div className="controls">
       <section className="ctl">
@@ -110,6 +122,15 @@ export default function Controls({ profile, onPlacement }: { profile: Profile; o
             <label key={a.id} className="check"><input type="checkbox" checked={!s.disabledApps.includes(a.id)} onChange={() => toggleApp(a.id)} /> {a.icon} {a.title}</label>
           ))}
         </div>
+      </section>
+
+      <section className="ctl">
+        <h3>📱 Device Visibility</h3>
+        <p className="small">Choose whether {profile.name} is shown on this device's player select screen.</p>
+        <label className="check">
+          <input type="checkbox" checked={activeOnDevice} onChange={toggleDeviceActive} />
+          {' '}Show {profile.name} on this device
+        </label>
       </section>
 
       <section className="ctl">

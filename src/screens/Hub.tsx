@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { frontier } from '../core/engine';
 import { patchProfile } from '../core/db';
 import { APPS } from '../core/registry';
@@ -96,6 +96,21 @@ export default function Hub({ profile, theme, lastIsland, onIsland, onMission, o
     }
   });
   const voice = useVoice();
+
+  // Personal voice greeting from the theme companion when entering the Hub
+  useEffect(() => {
+    if (showTour) return;
+    const key = `rlw.greeted.${profile.id}.${theme.id}`;
+    try {
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, '1');
+        const text = helperGreeting(theme, profile.name);
+        void speakThemeGreeting(theme.id, profile.name, text);
+      }
+    } catch {
+      // sessionStorage might fail in restricted environments
+    }
+  }, [profile.id, theme.id, profile.name, showTour]);
 
   // Auto-upgrade profiles so new themes (space-ranger, western, dino) are instantly accessible:
   const allowed = useMemo(() => {

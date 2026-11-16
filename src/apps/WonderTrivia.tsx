@@ -203,12 +203,12 @@ export default function WonderTrivia({ profile, theme, onExit, onComplete }: Min
     const speechPromise = (async () => {
       if (isCorrect) {
         const praiseIdx = Math.floor(Math.random() * (theme.praise?.length || 1));
-        await speakThemePraise(theme, praiseIdx);
+        await speakThemePraise(theme, praiseIdx, activePlayer.name);
         await speak(currentQuestion.funFact);
       } else {
         const encIdx = Math.floor(Math.random() * (theme.encouragements?.length || 1));
         const correctText = currentQuestion.choices.find((c) => c.correct)?.text;
-        await speakThemeEncouragement(theme, encIdx);
+        await speakThemeEncouragement(theme, encIdx, activePlayer.name);
         if (correctText) {
           await speak(`The correct answer is ${correctText}. ${currentQuestion.funFact}`);
         }

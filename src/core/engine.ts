@@ -332,25 +332,17 @@ export function applyAgeCalibration(
     setGameLevel(`${prefix}.${profileId}`, gameTier);
   }
 
-  const phonicsApps = ['word-builder', 'blend-plank'];
-  const countingApps = ['coin-count'];
-
   patchProfile(profileId, (p) => {
     p.age = opts.age;
     p.readingStage = opts.readingStage;
     p.mathStage = opts.mathStage;
     if (opts.markPlacementDone) p.placementDone = true;
 
-    const disabled = new Set(p.settings.disabledApps);
-    for (const id of phonicsApps) {
-      if (rStage.disablePhonics) disabled.add(id);
-      else disabled.delete(id);
-    }
-    for (const id of countingApps) {
-      if (mStage.disableCounting) disabled.add(id);
-      else disabled.delete(id);
-    }
-    p.settings.disabledApps = [...disabled];
+    // We do NOT disable apps from the islands/hub based on age:
+    // games adapt their questions to the child's frontier level, so all games stay accessible.
+    // If these apps were previously disabled by legacy age calibration, restore them:
+    const legacyAutoDisabled = ['word-builder', 'blend-plank', 'coin-count'];
+    p.settings.disabledApps = (p.settings.disabledApps || []).filter((id) => !legacyAutoDisabled.includes(id));
   });
 }
 

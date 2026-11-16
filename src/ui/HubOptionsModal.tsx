@@ -106,7 +106,7 @@ export function HubOptionsModal({
             <span className="tile-icon">💡</span>
             <div className="tile-text">
               <b>Welcome Tour</b>
-              <small>How Rowan's World works</small>
+              <small>How {profileName}'s World works</small>
             </div>
             <span className="tile-arrow">➔</span>
           </button>

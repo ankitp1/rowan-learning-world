@@ -1960,17 +1960,18 @@ table.skills { width: 100%; border-collapse: collapse; font-size: 16px; } table.
 }
 
 .tv-mode .maze-svg {
-  width: 740px !important;
-  height: 740px !important;
-  max-width: 740px !important;
-  max-height: 740px !important;
+  width: 650px !important;
+  height: 650px !important;
+  max-width: 650px !important;
+  max-height: 650px !important;
   aspect-ratio: 1 !important;
-  margin: 0 auto !important;
+  margin: 4px auto 12px !important;
   flex-shrink: 0 !important;
 }
 
 .tv-mode .maze-status {
-  margin-top: 8px !important;
+  margin-top: 6px !important;
+  margin-bottom: 8px !important;
   gap: 16px !important;
 }
 

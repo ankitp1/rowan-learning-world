@@ -29,6 +29,24 @@ export interface DB {
   parent: { pinHash?: string; salt?: string; updatedAt?: number };
 }
 
+function sanitizeProfiles(profiles: Profile[]): Profile[] {
+  const legacyAuto = ['word-builder', 'blend-plank', 'coin-count'];
+  return (profiles || []).map((p) => {
+    // If a profile had all 3 legacy apps auto-disabled from the old age-6+ calibration, clear them
+    const hasAllThree = legacyAuto.every((a) => p.settings?.disabledApps?.includes(a));
+    if (hasAllThree && p.settings?.disabledApps?.length === 3) {
+      return {
+        ...p,
+        settings: {
+          ...p.settings,
+          disabledApps: [],
+        },
+      };
+    }
+    return p;
+  });
+}
+
 function empty(): DB {
   return {
     version: 1, profiles: [], attempts: {}, skills: {}, playtime: {},
@@ -39,7 +57,11 @@ function empty(): DB {
 function load(): DB {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...empty(), ...JSON.parse(raw) };
+    if (raw) {
+      const data = { ...empty(), ...JSON.parse(raw) };
+      data.profiles = sanitizeProfiles(data.profiles);
+      return data;
+    }
   } catch { /* ignore corrupt data */ }
   return empty();
 }
@@ -56,6 +78,7 @@ export function update(fn: (d: DB) => void) {
   for (const pid of Object.keys(next.attempts)) {
     if (next.attempts[pid].length > MAX_ATTEMPTS) next.attempts[pid] = next.attempts[pid].slice(-MAX_ATTEMPTS);
   }
+  next.profiles = sanitizeProfiles(next.profiles);
   db = next;
   try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* storage full */ }
   listeners.forEach((l) => l());
@@ -64,6 +87,7 @@ export function update(fn: (d: DB) => void) {
 
 /** Used by cloud sync when applying a merged remote snapshot without re-broadcasting an identical write. */
 export function applyMergedDB(next: DB) {
+  next.profiles = sanitizeProfiles(next.profiles);
   db = next;
   try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* storage full */ }
   listeners.forEach((l) => l());
@@ -108,17 +132,55 @@ export function getDeviceId(): string {
   }
 }
 
+const DEVICE_PROFILES_KEY = 'rowan-learning-world.deviceProfiles.v1';
+
+export function getDeviceProfileIds(): string[] {
+  try {
+    const raw = localStorage.getItem(DEVICE_PROFILES_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return [];
+}
+
+export function setDeviceProfileIds(ids: string[]) {
+  try {
+    localStorage.setItem(DEVICE_PROFILES_KEY, JSON.stringify(ids));
+  } catch { /* ignore */ }
+  listeners.forEach((l) => l());
+}
+
+export function addDeviceProfileId(profileId: string) {
+  const cur = getDeviceProfileIds();
+  if (!cur.includes(profileId)) {
+    setDeviceProfileIds([...cur, profileId]);
+  }
+}
+
+export function removeDeviceProfileId(profileId: string) {
+  const cur = getDeviceProfileIds();
+  setDeviceProfileIds(cur.filter((id) => id !== profileId));
+}
+
+export function isProfileActiveOnDevice(profileId: string): boolean {
+  const cur = getDeviceProfileIds();
+  if (!cur.length) return true;
+  return cur.includes(profileId);
+}
+
 export function getProfile(id: string | undefined) {
   return db.profiles.find((p) => p.id === id);
 }
 
 export function createProfile(name: string, avatar: string, themeId: string): Profile {
   const now = Date.now();
+  const devId = getDeviceId();
   const p: Profile = {
     id: uid(), name, avatar, themeId, levels: {}, focusSkills: [], placementDone: false,
     stars: 0, stickers: [], createdAt: now, updatedAt: now,
+    createdOnDeviceId: devId,
     settings: { dailyMinutes: 0, hintMode: 'full', speechRate: 0.9, allowedThemes: [], disabledApps: [] },
   };
+  addDeviceProfileId(p.id);
   update((d) => { d.profiles.push(p); });
   return p;
 }

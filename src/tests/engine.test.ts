@@ -182,7 +182,7 @@ describe('missions', () => {
 });
 
 describe('age & readiness calibration', () => {
-  it('calibrates a 6-year-old fluent reader to skip phonics & basic counting and start at advanced math', () => {
+  it('calibrates a 6-year-old fluent reader to advanced levels and keeps all game options accessible', () => {
     resetAll();
     const p = createProfile('Maya', '👧', 'pups');
     const defs = defaultStagesForAge(6);
@@ -192,17 +192,12 @@ describe('age & readiness calibration', () => {
     expect(updated.age).toBe(6);
     expect(updated.readingStage).toBe('fluent');
     expect(updated.mathStage).toBe('advanced20');
-    expect(updated.settings.disabledApps).toContain('word-builder');
-    expect(updated.settings.disabledApps).toContain('blend-plank');
-    expect(updated.settings.disabledApps).toContain('coin-count');
+    expect(updated.settings.disabledApps).toEqual([]);
     expect(updated.levels.reading).toBeGreaterThanOrEqual(11);
     expect(updated.levels.math).toBeGreaterThanOrEqual(7);
     expect(getGameLevel(`rlw.code.${p.id}`)).toBe(2);
     const plan = buildMission(updated, APPS, mulberry(9));
     expect(plan).toHaveLength(5);
-    expect(plan).not.toContain('word-builder');
-    expect(plan).not.toContain('blend-plank');
-    expect(plan).not.toContain('coin-count');
   });
 
   it('parses spoken numbers and homophones for voice answers', () => {
