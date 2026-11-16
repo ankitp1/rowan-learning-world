@@ -51,7 +51,7 @@ export default function Maze({ profile, theme, onExit, onComplete }: MiniAppProp
       say(want === m.numbers.length ? `${num.n}! That's all of them. Now find the ${theme.container.name}!` : `${num.n}! Now find ${num.n + 1}.`);
       return;
     }
-    if (num && num.n > want) { say(`That's ${num.n}. Find ${want} first!`); return; }
+    // Moving through or stopping at a future number is NOT a mistake; the player is simply traversing the maze
     if (cell.x === m.w - 1 && cell.y === m.h - 1) {
       if (want > m.numbers.length) {
         setWon(true);
@@ -67,7 +67,7 @@ export default function Maze({ profile, theme, onExit, onComplete }: MiniAppProp
   const move = useCallback(async (d: Dir) => {
     const s = live.current;
     if (busy.current || s.won) return;
-    const path = slide(s.maze, s.pos.x, s.pos.y, d);
+    const path = slide(s.maze, s.pos.x, s.pos.y, d, s.next);
     if (!path.length) { sfx.soft(); return; }
     busy.current = true;
     for (const cell of path) {
@@ -144,41 +144,47 @@ export default function Maze({ profile, theme, onExit, onComplete }: MiniAppProp
         <h2>🌀 Number Maze</h2>
         <div className="clues">Maze {level + 1} · {size}×{size}</div>
       </header>
-      <Bubble theme={theme} text={bubble} />
-      <div className="maze-wrap">
-        <svg
-          className="maze-svg" viewBox={`-0.25 -0.25 ${size + 0.5} ${size + 0.5}`}
-          onPointerDown={onPointerDown} onPointerUp={onPointerUp}
-          onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
-          role="application" aria-label="maze, use the arrow keys"
-        >
-          <rect x="-0.2" y="-0.2" width={size + 0.4} height={size + 0.4} rx="0.5" className="maze-frame" />
-          <rect x="0" y="0" width={size} height={size} className="maze-floor" />
-          <polyline className="maze-trail" points={trail.map((c) => `${c.x + 0.5},${c.y + 0.5}`).join(' ')} />
-          <circle cx="0.5" cy="0.5" r="0.3" className="maze-start" />
-          {unlocked && <circle cx={size - 0.5} cy={size - 0.5} r="0.55" className="maze-exit-glow" />}
-          <text x={size - 0.5} y={size - 0.46} className="maze-exit" style={{ opacity: unlocked ? 1 : 0.55 }}>{theme.container.emoji}</text>
-          <path d={walls} className="maze-walls" />
-          {maze.numbers.filter((n) => !got(n.n)).map((n) => (
-            <g key={n.n} className={n.n === next ? 'maze-num next' : 'maze-num'}>
-              <circle cx={n.x + 0.5} cy={n.y + 0.5} r="0.36" />
-              <text x={n.x + 0.5} y={n.y + 0.53}>{n.n}</text>
-            </g>
-          ))}
-          <g className="maze-player" style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }}>
-            <text x="0.5" y="0.54">{profile.avatar}</text>
-          </g>
-        </svg>
-        <div className="dpad" aria-label="move buttons">
-          <button onClick={() => void move('N')} aria-label="up" className="up">▲</button>
-          <button onClick={() => void move('W')} aria-label="left" className="left">◀</button>
-          <button onClick={() => void move('E')} aria-label="right" className="right">▶</button>
-          <button onClick={() => void move('S')} aria-label="down" className="down">▼</button>
+      <div className="maze-stage">
+        <div className="maze-sidebar">
+          <Bubble theme={theme} text={bubble} />
+          <div className="maze-status">
+            <div className="maze-chips-row">
+              {maze.numbers.map((n) => <span key={n.n} className={`chip${got(n.n) ? ' got' : ''}${n.n === next ? ' next' : ''}`}>{n.n}</span>)}
+            </div>
+            <button className="chip-btn" onClick={() => setShuffle((s) => s + 1)}>🔀 New maze</button>
+          </div>
         </div>
-      </div>
-      <div className="maze-status">
-        {maze.numbers.map((n) => <span key={n.n} className={`chip${got(n.n) ? ' got' : ''}${n.n === next ? ' next' : ''}`}>{n.n}</span>)}
-        <button className="chip-btn" onClick={() => setShuffle((s) => s + 1)}>🔀 New maze</button>
+        <div className="maze-wrap">
+          <svg
+            className="maze-svg" viewBox={`-0.25 -0.25 ${size + 0.5} ${size + 0.5}`}
+            onPointerDown={onPointerDown} onPointerUp={onPointerUp}
+            onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
+            role="application" aria-label="maze, use the arrow keys"
+          >
+            <rect x="-0.2" y="-0.2" width={size + 0.4} height={size + 0.4} rx="0.5" className="maze-frame" />
+            <rect x="0" y="0" width={size} height={size} className="maze-floor" />
+            <polyline className="maze-trail" points={trail.map((c) => `${c.x + 0.5},${c.y + 0.5}`).join(' ')} />
+            <circle cx="0.5" cy="0.5" r="0.3" className="maze-start" />
+            {unlocked && <circle cx={size - 0.5} cy={size - 0.5} r="0.55" className="maze-exit-glow" />}
+            <text x={size - 0.5} y={size - 0.46} className="maze-exit" style={{ opacity: unlocked ? 1 : 0.55 }}>{theme.container.emoji}</text>
+            <path d={walls} className="maze-walls" />
+            {maze.numbers.filter((n) => !got(n.n)).map((n) => (
+              <g key={n.n} className={n.n === next ? 'maze-num next' : 'maze-num'}>
+                <circle cx={n.x + 0.5} cy={n.y + 0.5} r="0.36" />
+                <text x={n.x + 0.5} y={n.y + 0.53}>{n.n}</text>
+              </g>
+            ))}
+            <g className="maze-player" style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }}>
+              <text x="0.5" y="0.54">{profile.avatar}</text>
+            </g>
+          </svg>
+          <div className="dpad" aria-label="move buttons">
+            <button onClick={() => void move('N')} aria-label="up" className="up">▲</button>
+            <button onClick={() => void move('W')} aria-label="left" className="left">◀</button>
+            <button onClick={() => void move('E')} aria-label="right" className="right">▶</button>
+            <button onClick={() => void move('S')} aria-label="down" className="down">▼</button>
+          </div>
+        </div>
       </div>
       {won && (
         <div className="overlay">

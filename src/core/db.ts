@@ -29,7 +29,7 @@ export interface DB {
   parent: { pinHash?: string; salt?: string; updatedAt?: number };
 }
 
-function sanitizeProfiles(profiles: Profile[]): Profile[] {
+export function sanitizeProfiles(profiles: Profile[]): Profile[] {
   const legacyAuto = ['word-builder', 'blend-plank', 'coin-count'];
   return (profiles || []).map((p) => {
     // If a profile had all 3 legacy apps auto-disabled from the old age-6+ calibration, clear them
@@ -37,6 +37,7 @@ function sanitizeProfiles(profiles: Profile[]): Profile[] {
     if (hasAllThree && p.settings?.disabledApps?.length === 3) {
       return {
         ...p,
+        updatedAt: Math.max(p.updatedAt ?? 0, Date.now()),
         settings: {
           ...p.settings,
           disabledApps: [],

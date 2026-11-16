@@ -56,17 +56,21 @@ export function generateMaze(w: number, h: number, k: number, rng: () => number 
 export const openDirs = (m: Maze, x: number, y: number): Dir[] => DIRS.filter((d) => !m.cells[y][x][d]);
 
 /**
- * Run along a corridor: keep moving until a junction, dead end, number or the exit.
- * Keeps big mazes playable (one press follows the passage around corners).
+ * Run along a corridor: keep moving until a junction, dead end, target number or the exit.
+ * If targetNumber is provided, only stops at that specific number (so players can freely pass
+ * higher numbers without stopping when navigating to their current target number).
  */
-export function slide(m: Maze, x: number, y: number, d: Dir): { x: number; y: number }[] {
+export function slide(m: Maze, x: number, y: number, d: Dir, targetNumber?: number): { x: number; y: number }[] {
   const path: { x: number; y: number }[] = [];
   let dir = d;
   if (m.cells[y][x][dir]) return path;
   for (let i = 0; i < m.w * m.h; i++) {
     x += STEP[dir][0]; y += STEP[dir][1];
     path.push({ x, y });
-    if (m.numbers.some((n) => n.x === x && n.y === y) || (x === m.w - 1 && y === m.h - 1)) break;
+    const hitTarget = targetNumber !== undefined
+      ? m.numbers.some((n) => n.x === x && n.y === y && n.n === targetNumber)
+      : m.numbers.some((n) => n.x === x && n.y === y);
+    if (hitTarget || (x === m.w - 1 && y === m.h - 1)) break;
     const exits = openDirs(m, x, y).filter((o) => o !== OPP[dir]);
     if (exits.length !== 1) break; // junction or dead end
     dir = exits[0];

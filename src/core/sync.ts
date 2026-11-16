@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { initializeApp, getApps } from 'firebase/app';
 import { doc, getDoc, getFirestore, onSnapshot, setDoc, type Firestore, type Unsubscribe } from 'firebase/firestore';
-import { applyMergedDB, getDB, getDeviceId, onLocalMutation, todayKey, uid, type DB } from './db';
+import { applyMergedDB, getDB, getDeviceId, onLocalMutation, sanitizeProfiles, todayKey, uid, type DB } from './db';
 import { DAY, applyAttempt, blankState } from './engine';
 import { isLegacyDevice } from './legacyDevice';
 import type { Attempt, Profile, SkillState, Subject } from './types';
@@ -89,7 +89,7 @@ export function mergeDB(local: DB, remote: DB): DB {
     const existing = profMap.get(p.id);
     profMap.set(p.id, existing ? mergeProfile(existing, p) : structuredClone(p));
   }
-  const profiles = [...profMap.values()].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+  const profiles = sanitizeProfiles([...profMap.values()].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0)));
   const activeIds = new Set(profiles.map((p) => p.id));
 
   // Merge skill reset timestamps
