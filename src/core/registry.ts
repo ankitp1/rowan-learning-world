@@ -85,6 +85,11 @@ export const APPS: MiniApp[] = [
     component: lazy(() => import('../apps/WonderTrivia')),
   },
   {
+    id: 'flag-capital-trivia', title: 'Flags & Capitals', subject: 'games', icon: '🚩',
+    blurb: 'Country flags, capital cities, and famous world monuments', skills: [],
+    component: lazy(() => import('../apps/FlagCapitalTrivia')),
+  },
+  {
     id: 'world-explorer', title: 'World Explorer', subject: 'games', icon: '🗺️',
     blurb: 'Explore continents, oceans, and landmarks with maps', skills: [],
     component: lazy(() => import('../apps/WorldExplorer')),

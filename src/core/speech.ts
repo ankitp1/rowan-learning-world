@@ -97,7 +97,7 @@ export function speak(text: string, opts: { rate?: number; pitch?: number; inter
     // Bounded pitch range [0.93, 1.08] prevents robotic/metallic phase-vocoder distortion
     const rawPitch = opts.pitch ?? activeThemeVoice.pitch ?? 1.0;
     const finalPitch = Math.max(0.93, Math.min(1.08, rawPitch));
-    const estMs = Math.min(7500, 550 + (clean.length * 95) / (finalRate || 1));
+    const estMs = Math.min(5000, 450 + (clean.length * 85) / (finalRate || 1));
 
     // 1. Native Android TV / Chromecast TTS bridge
     if (typeof window !== 'undefined' && window.AndroidTTS && (!window.AndroidTTS.isReady || window.AndroidTTS.isReady())) {
@@ -121,7 +121,7 @@ export function speak(text: string, opts: { rate?: number; pitch?: number; inter
       if (v) u.voice = v;
       let finished = false;
       const done = () => { if (!finished) { finished = true; clearTimeout(guard); resolve(); } };
-      const guard = setTimeout(done, estMs + 300);
+      const guard = setTimeout(done, estMs + 250);
       u.onend = done;
       u.onerror = done;
       synth.speak(u);
@@ -141,7 +141,8 @@ export function speak(text: string, opts: { rate?: number; pitch?: number; inter
         activeAudio = a;
         let finished = false;
         const done = () => { if (!finished) { finished = true; clearTimeout(guard); resolve(); } };
-        const guard = setTimeout(done, estMs + 500);
+        // Fast timeout so network stalling never leaves the player waiting
+        const guard = setTimeout(done, Math.min(3500, estMs + 300));
         a.onended = done;
         a.onerror = done;
         a.play().catch(done);
@@ -183,13 +184,14 @@ export function playCharacterAudio(themeId: string, clipKey: string): Promise<bo
         }
       };
 
-      // Safety timeout: 16s allows longest greeting (9.6s) to finish with buffer
-      guard = setTimeout(() => done(true), 16000);
+      // Fast initial safety timeout (3.5s) if network stalls or audio is missing;
+      // if metadata loads, update to exact duration + 400ms buffer
+      guard = setTimeout(() => done(false), 3500);
 
       a.onloadedmetadata = () => {
         if (!finished && a.duration && !isNaN(a.duration) && isFinite(a.duration)) {
           if (guard) clearTimeout(guard);
-          guard = setTimeout(() => done(true), a.duration * 1000 + 600);
+          guard = setTimeout(() => done(true), a.duration * 1000 + 400);
         }
       };
 
