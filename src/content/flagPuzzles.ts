@@ -54,7 +54,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Asia',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Japan? 🇯🇵',
+    question: 'Which piece completes the flag of Japan?',
     say: 'Which piece completes the flag of Japan?',
     flagStyle: {
       type: 'circle_center',
@@ -81,7 +81,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'North America',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Canada? 🇨🇦',
+    question: 'Which piece completes the flag of Canada?',
     say: 'Which piece completes the flag of Canada?',
     flagStyle: {
       type: 'emblem_center',
@@ -108,7 +108,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Europe',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of France? 🇫🇷',
+    question: 'Which piece completes the flag of France?',
     say: 'Which piece completes the flag of France?',
     flagStyle: {
       type: 'stripe_vertical',
@@ -135,7 +135,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'North America',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of the United States? 🇺🇸',
+    question: 'Which piece completes the flag of the United States?',
     say: 'Which piece completes the flag of the United States?',
     flagStyle: {
       type: 'canton',
@@ -163,7 +163,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Asia',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of India? 🇮🇳',
+    question: 'Which piece completes the flag of India?',
     say: 'Which piece completes the flag of India?',
     flagStyle: {
       type: 'emblem_center',
@@ -190,7 +190,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Europe',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Italy? 🇮🇹',
+    question: 'Which piece completes the flag of Italy?',
     say: 'Which piece completes the flag of Italy?',
     flagStyle: {
       type: 'stripe_vertical',
@@ -217,7 +217,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'South America',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Brazil? 🇧🇷',
+    question: 'Which piece completes the flag of Brazil?',
     say: 'Which piece completes the flag of Brazil?',
     flagStyle: {
       type: 'emblem_center',
@@ -245,7 +245,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'South America',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Argentina? 🇦🇷',
+    question: 'Which piece completes the flag of Argentina?',
     say: 'Which piece completes the flag of Argentina?',
     flagStyle: {
       type: 'emblem_center',
@@ -272,7 +272,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Europe',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Germany? 🇩🇪',
+    question: 'Which piece completes the flag of Germany?',
     say: 'Which piece completes the flag of Germany?',
     flagStyle: {
       type: 'stripe_horizontal',
@@ -299,7 +299,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Europe',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Greece? 🇬🇷',
+    question: 'Which piece completes the flag of Greece?',
     say: 'Which piece completes the flag of Greece?',
     flagStyle: {
       type: 'canton',
@@ -327,7 +327,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'North America',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Mexico? 🇲🇽',
+    question: 'Which piece completes the flag of Mexico?',
     say: 'Which piece completes the flag of Mexico?',
     flagStyle: {
       type: 'emblem_center',
@@ -354,7 +354,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Asia',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of South Korea? 🇰🇷',
+    question: 'Which piece completes the flag of South Korea?',
     say: 'Which piece completes the flag of South Korea?',
     flagStyle: {
       type: 'circle_center',
@@ -381,7 +381,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Africa',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Egypt? 🇪🇬',
+    question: 'Which piece completes the flag of Egypt?',
     say: 'Which piece completes the flag of Egypt?',
     flagStyle: {
       type: 'emblem_center',
@@ -408,7 +408,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Europe',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Switzerland? 🇨🇭',
+    question: 'Which piece completes the flag of Switzerland?',
     say: 'Which piece completes the flag of Switzerland?',
     flagStyle: {
       type: 'cross_center',
@@ -435,7 +435,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Oceania',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Australia? 🇦🇺',
+    question: 'Which piece completes the flag of Australia?',
     say: 'Which piece completes the flag of Australia?',
     flagStyle: {
       type: 'canton',
@@ -463,7 +463,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Europe',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of the United Kingdom? 🇬🇧',
+    question: 'Which piece completes the flag of the United Kingdom?',
     say: 'Which piece completes the flag of the United Kingdom?',
     flagStyle: {
       type: 'cross_center',
@@ -490,7 +490,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Asia',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of China? 🇨🇳',
+    question: 'Which piece completes the flag of China?',
     say: 'Which piece completes the flag of China?',
     flagStyle: {
       type: 'canton',
@@ -518,7 +518,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Europe',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Sweden? 🇸🇪',
+    question: 'Which piece completes the flag of Sweden?',
     say: 'Which piece completes the flag of Sweden?',
     flagStyle: {
       type: 'cross_center',
@@ -545,7 +545,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'North America',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Jamaica? 🇯🇲',
+    question: 'Which piece completes the flag of Jamaica?',
     say: 'Which piece completes the flag of Jamaica?',
     flagStyle: {
       type: 'cross_center',
@@ -572,7 +572,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Africa',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Kenya? 🇰🇪',
+    question: 'Which piece completes the flag of Kenya?',
     say: 'Which piece completes the flag of Kenya?',
     flagStyle: {
       type: 'emblem_center',
@@ -599,7 +599,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Africa',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of South Africa? 🇿🇦',
+    question: 'Which piece completes the flag of South Africa?',
     say: 'Which piece completes the flag of South Africa?',
     flagStyle: {
       type: 'emblem_center',
@@ -627,7 +627,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Europe',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Ireland? 🇮🇪',
+    question: 'Which piece completes the flag of Ireland?',
     say: 'Which piece completes the flag of Ireland?',
     flagStyle: {
       type: 'stripe_vertical',
@@ -654,7 +654,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'Europe',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Norway? 🇳🇴',
+    question: 'Which piece completes the flag of Norway?',
     say: 'Which piece completes the flag of Norway?',
     flagStyle: {
       type: 'cross_center',
@@ -681,7 +681,7 @@ export const FLAG_PUZZLE_LIBRARY: FlagPuzzleItem[] = [
     continent: 'South America',
     minAge: 4,
     maxAge: 12,
-    question: 'Which piece completes the flag of Peru? 🇵🇪',
+    question: 'Which piece completes the flag of Peru?',
     say: 'Which piece completes the flag of Peru?',
     flagStyle: {
       type: 'stripe_vertical',

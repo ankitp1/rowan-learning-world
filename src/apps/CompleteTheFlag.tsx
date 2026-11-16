@@ -10,6 +10,25 @@ import { awardPassportStamp } from '../core/passport';
 import { sfx, speak, speakThemePraise, stopSpeaking } from '../core/speech';
 import type { MiniAppProps } from '../core/types';
 import { Confetti } from '../ui/Art';
+import {
+  AshokaChakraGraphic,
+  BrazilGlobeGraphic,
+  ChinaStarsGraphic,
+  GoldenEagleGraphic,
+  GreekCantonGraphic,
+  JamaicaSaltireGraphic,
+  MaasaiShieldGraphic,
+  MapleLeafGraphic,
+  NordicCrossGraphic,
+  renderPieceGraphic,
+  SouthAfricaPallGraphic,
+  SunDiscGraphic,
+  SunOfMayGraphic,
+  SwissCrossGraphic,
+  TaegeukGraphic,
+  UnionJackGraphic,
+  UsCantonGraphic,
+} from '../ui/FlagGraphics';
 import { GameShell } from '../ui/GameShell';
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
@@ -83,7 +102,7 @@ export default function CompleteTheFlag({
         return `${prefix}${letter}: ${c.text}`;
       })
       .join(', ');
-    return `${q} Is it: ${choicesText}?`;
+    return `${q} Missing: ${puzzle.missingDescription}. Is it: ${choicesText}?`;
   }, []);
 
   const startRound = useCallback(
@@ -260,7 +279,6 @@ export default function CompleteTheFlag({
     return null;
   }
 
-  // Find the correct choice object
   const correctChoice = currentPuzzle.choices.find((c) => c.correct);
 
   return (
@@ -279,24 +297,28 @@ export default function CompleteTheFlag({
         {/* Header / Question info card */}
         <div className="complete-flag-header-card">
           <div className="complete-flag-meta">
-            <span className="country-badge">
-              {currentPuzzle.flagEmoji} {currentPuzzle.country}
+            <span className="country-badge">🌍 {currentPuzzle.country}</span>
+            <span className="continent-badge">📍 {currentPuzzle.continent}</span>
+            <span className="piece-needed-pill">
+              🧩 Missing: <b>{currentPuzzle.missingDescription}</b>
             </span>
-            <span className="continent-badge">🌍 {currentPuzzle.continent}</span>
             <button
               type="button"
               className="hear-btn"
               onClick={handleHearAgain}
-              title="Hear question or fun fact aloud"
+              title="Hear question and clue aloud"
             >
-              🔊 Hear
+              🔊 Tap to Hear
             </button>
           </div>
 
           <h2 className="complete-flag-question">{currentPuzzle.question}</h2>
+          <p className="complete-flag-hint">
+            Study the flag below. Tap the missing puzzle piece that fits into the cut-out!
+          </p>
         </div>
 
-        {/* Big Visual Flag Box */}
+        {/* Big Visual Flag Hero Canvas */}
         <div className="complete-flag-stage">
           <div className="flag-canvas-wrapper">
             <FlagVisualCanvas
@@ -347,7 +369,7 @@ export default function CompleteTheFlag({
           </div>
         )}
 
-        {/* 4 Choices Grid */}
+        {/* 4 Large Visual Puzzle Piece Choices */}
         <div className="complete-flag-choices-grid">
           {currentPuzzle.choices.map((choice, index) => {
             const letter = OPTION_LETTERS[index];
@@ -372,11 +394,10 @@ export default function CompleteTheFlag({
                 disabled={answered}
                 data-autofocus={index === 0 && !answered ? true : undefined}
                 onClick={() => handleSelectChoice(choice)}
+                aria-label={`Option ${letter}: ${choice.text}`}
               >
-                <span className="choice-letter-badge">{letter}</span>
-                <span className="choice-emoji-chip">{choice.emoji}</span>
-                <span className="choice-text-wrap">
-                  <span className="choice-title">{choice.text}</span>
+                <div className="choice-card-header">
+                  <span className="choice-letter-badge">{letter}</span>
                   {choice.color && (
                     <span
                       className="choice-color-dot"
@@ -384,13 +405,25 @@ export default function CompleteTheFlag({
                       title={choice.color}
                     />
                   )}
-                </span>
-                {answered && choice.correct && (
-                  <span className="choice-icon-mark">✓</span>
-                )}
-                {answered && isSelected && !choice.correct && (
-                  <span className="choice-icon-mark">✕</span>
-                )}
+                  {answered && choice.correct && (
+                    <span className="choice-icon-mark correct">✓</span>
+                  )}
+                  {answered && isSelected && !choice.correct && (
+                    <span className="choice-icon-mark wrong">✕</span>
+                  )}
+                </div>
+
+                {/* Big Visual Graphic Preview of the Piece */}
+                <div className="choice-visual-preview">
+                  {renderPieceGraphic(choice.text, choice.color, 76)}
+                  <span className="choice-emoji-chip" style={{ display: 'none' }}>
+                    {choice.emoji}
+                  </span>
+                </div>
+
+                <div className="choice-title-wrap">
+                  <span className="choice-title">{choice.text}</span>
+                </div>
               </button>
             );
           })}
@@ -401,7 +434,7 @@ export default function CompleteTheFlag({
 }
 
 /**
- * FlagVisualCanvas renders a high-definition flag with the missing piece slot.
+ * FlagVisualCanvas renders a prominent, high-definition flag with the missing piece slot.
  * When `snapped` is true, the missing piece snaps into place with a smooth entrance!
  */
 function FlagVisualCanvas({
@@ -416,393 +449,326 @@ function FlagVisualCanvas({
   const { flagStyle, country } = puzzle;
   const layout = flagStyle.type;
 
-  // 1. Circle in Center (e.g. Japan, South Korea)
-  if (layout === 'circle_center') {
-    const baseColor = (flagStyle.baseColor as string) || '#ffffff';
-    const emblem = (flagStyle.emblemEmoji as string) || correctChoice?.emoji || '🔴';
-
-    return (
-      <div
-        className="flag-box circle-center-flag"
-        style={{ backgroundColor: baseColor }}
-        aria-label={`Flag of ${country}`}
-      >
-        <div
-          className={`missing-slot circle-slot ${
-            snapped ? 'slot-snapped' : 'slot-empty'
-          }`}
-        >
-          {snapped ? (
-            <div className="snapped-piece circle-piece">
-              {puzzle.id === 'puzzle_japan' ? (
-                <div
-                  className="japan-sun-circle"
-                  style={{ backgroundColor: puzzle.colors[1] || '#bc002d' }}
-                />
-              ) : (
-                <span className="snapped-emoji">{emblem}</span>
-              )}
-            </div>
-          ) : (
-            <div className="pulsing-slot-indicator" title="Missing Piece">
-              <span className="pulse-question-badge">?</span>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // 2. Vertical Stripes (e.g. France, Italy, Ireland, Peru)
-  if (layout === 'stripe_vertical') {
-    const stripeColors = (flagStyle.stripeColors as string[]) || puzzle.colors;
-    const missingIdx =
-      typeof flagStyle.missingStripeIndex === 'number'
-        ? flagStyle.missingStripeIndex
-        : 1;
-
-    return (
-      <div
-        className="flag-box stripe-vertical-flag"
-        aria-label={`Flag of ${country}`}
-      >
-        {stripeColors.map((col, idx) => {
-          const isMissing = idx === missingIdx;
-          if (isMissing) {
-            return (
-              <div
-                key={idx}
-                className={`vertical-stripe-slot missing-slot ${
-                  snapped ? 'slot-snapped' : 'slot-empty'
-                }`}
-                style={{
-                  backgroundColor: snapped ? col : 'rgba(255, 255, 255, 0.15)',
-                }}
-              >
-                {snapped ? (
-                  <div
-                    className="snapped-stripe-fill"
-                    style={{ backgroundColor: col }}
-                  />
-                ) : (
-                  <div className="pulsing-slot-indicator">
-                    <span className="pulse-question-badge">?</span>
-                  </div>
-                )}
-              </div>
-            );
-          }
-          return (
-            <div
-              key={idx}
-              className="vertical-stripe-slot"
-              style={{ backgroundColor: col }}
-            />
-          );
-        })}
-      </div>
-    );
-  }
-
-  // 3. Horizontal Stripes (e.g. Germany)
-  if (layout === 'stripe_horizontal') {
-    const stripeColors = (flagStyle.stripeColors as string[]) || puzzle.colors;
-    const missingIdx =
-      typeof flagStyle.missingStripeIndex === 'number'
-        ? flagStyle.missingStripeIndex
-        : stripeColors.length - 1;
-
-    return (
-      <div
-        className="flag-box stripe-horizontal-flag"
-        aria-label={`Flag of ${country}`}
-      >
-        {stripeColors.map((col, idx) => {
-          const isMissing = idx === missingIdx;
-          if (isMissing) {
-            return (
-              <div
-                key={idx}
-                className={`horizontal-stripe-slot missing-slot ${
-                  snapped ? 'slot-snapped' : 'slot-empty'
-                }`}
-                style={{
-                  backgroundColor: snapped ? col : 'rgba(255, 255, 255, 0.15)',
-                }}
-              >
-                {snapped ? (
-                  <div
-                    className="snapped-stripe-fill"
-                    style={{ backgroundColor: col }}
-                  />
-                ) : (
-                  <div className="pulsing-slot-indicator">
-                    <span className="pulse-question-badge">?</span>
-                  </div>
-                )}
-              </div>
-            );
-          }
-          return (
-            <div
-              key={idx}
-              className="horizontal-stripe-slot"
-              style={{ backgroundColor: col }}
-            />
-          );
-        })}
-      </div>
-    );
-  }
-
-  // 4. Canton in Top-Left (e.g. USA, Greece, Australia, China)
-  if (layout === 'canton') {
-    const baseColor = (flagStyle.baseColor as string) || puzzle.colors[0];
-    const cantonColor = (flagStyle.cantonColor as string) || '#002868';
-    const emblem = (flagStyle.emblemEmoji as string) || correctChoice?.emoji || '⭐';
-
-    return (
-      <div
-        className="flag-box canton-flag"
-        style={{ backgroundColor: baseColor }}
-        aria-label={`Flag of ${country}`}
-      >
-        {/* USA stripes background if USA */}
-        {puzzle.id === 'puzzle_usa' && (
-          <div className="usa-stripes-bg">
-            {Array.from({ length: 13 }).map((_, i) => (
-              <div
-                key={i}
-                className="usa-stripe"
-                style={{ backgroundColor: i % 2 === 0 ? '#b22234' : '#ffffff' }}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Greece stripes background if Greece */}
-        {puzzle.id === 'puzzle_greece' && (
-          <div className="greece-stripes-bg">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <div
-                key={i}
-                className="greece-stripe"
-                style={{ backgroundColor: i % 2 === 0 ? '#0d5eaf' : '#ffffff' }}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Australia Southern Cross field stars */}
-        {puzzle.id === 'puzzle_australia' && (
-          <div className="australia-stars-field">
-            <span className="star-com">⭐</span>
-            <span className="star-crux s1">★</span>
-            <span className="star-crux s2">★</span>
-            <span className="star-crux s3">★</span>
-            <span className="star-crux s4">★</span>
-          </div>
-        )}
-
-        {/* Missing Canton Slot */}
-        <div
-          className={`canton-slot missing-slot ${
-            snapped ? 'slot-snapped' : 'slot-empty'
-          }`}
-          style={{
-            backgroundColor: snapped ? cantonColor : 'rgba(0, 0, 0, 0.4)',
-          }}
-        >
-          {snapped ? (
-            <div className="snapped-canton-content">
-              {puzzle.id === 'puzzle_usa' && (
-                <div className="usa-stars-grid">
-                  <span>★ ★ ★ ★ ★</span>
-                  <span>★ ★ ★ ★</span>
-                  <span>★ ★ ★ ★ ★</span>
-                </div>
-              )}
-              {puzzle.id === 'puzzle_greece' && (
-                <div className="greece-canton-cross">
-                  <div className="cross-v" />
-                  <div className="cross-h" />
-                </div>
-              )}
-              {puzzle.id === 'puzzle_australia' && (
-                <div className="australia-union-jack">🇬🇧</div>
-              )}
-              {puzzle.id === 'puzzle_china' && (
-                <div className="china-stars-cluster">
-                  <span className="big-star">⭐</span>
-                  <div className="small-stars">
-                    <span>★</span>
-                    <span>★</span>
-                    <span>★</span>
-                    <span>★</span>
-                  </div>
-                </div>
-              )}
-              {!['puzzle_usa', 'puzzle_greece', 'puzzle_australia', 'puzzle_china'].includes(
-                puzzle.id
-              ) && <span className="snapped-emoji">{emblem}</span>}
-            </div>
-          ) : (
-            <div className="pulsing-slot-indicator">
-              <span className="pulse-question-badge">?</span>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // 5. Cross (Center or Nordic, e.g. Switzerland, Sweden, UK, Norway, Jamaica)
-  if (layout === 'cross_center') {
-    const baseColor = (flagStyle.baseColor as string) || puzzle.colors[0];
-    const emblem = (flagStyle.emblemEmoji as string) || correctChoice?.emoji || '➕';
-
-    return (
-      <div
-        className="flag-box cross-flag"
-        style={{ backgroundColor: baseColor }}
-        aria-label={`Flag of ${country}`}
-      >
-        {/* Sweden blue background with yellow Nordic cross */}
-        {puzzle.id === 'puzzle_sweden' && snapped && (
-          <div className="nordic-cross yellow-nordic-cross">
-            <div className="nordic-bar-h" />
-            <div className="nordic-bar-v" />
-          </div>
-        )}
-
-        {/* Norway red background with dark blue and white Nordic cross */}
-        {puzzle.id === 'puzzle_norway' && snapped && (
-          <div className="nordic-cross norway-nordic-cross">
-            <div className="nordic-bar-h-white" />
-            <div className="nordic-bar-v-white" />
-            <div className="nordic-bar-h-blue" />
-            <div className="nordic-bar-v-blue" />
-          </div>
-        )}
-
-        {/* Jamaica saltire cross */}
-        {puzzle.id === 'puzzle_jamaica' && (
-          <div className="jamaica-field">
-            <div className="jamaica-tri top" />
-            <div className="jamaica-tri bottom" />
-            <div className="jamaica-tri left" />
-            <div className="jamaica-tri right" />
-            {snapped && <div className="jamaica-gold-saltire" />}
-          </div>
-        )}
-
-        {/* UK Union Jack crosses */}
-        {puzzle.id === 'puzzle_uk' && snapped && (
-          <div className="uk-crosses-wrap">
-            <div className="uk-st-andrew-white" />
-            <div className="uk-st-patrick-red" />
-            <div className="uk-st-george-white" />
-            <div className="uk-st-george-red" />
-          </div>
-        )}
-
-        {/* Switzerland white Greek cross */}
-        {puzzle.id === 'puzzle_switzerland' && snapped && (
-          <div className="swiss-greek-cross">
-            <div className="swiss-cross-v" />
-            <div className="swiss-cross-h" />
-          </div>
-        )}
-
-        {/* Missing Cross / Emblem Slot */}
-        <div
-          className={`cross-slot missing-slot ${
-            snapped ? 'slot-snapped' : 'slot-empty'
-          }`}
-        >
-          {snapped ? (
-            <div className="snapped-piece cross-piece">
-              <span className="snapped-emoji">{emblem}</span>
-            </div>
-          ) : (
-            <div className="pulsing-slot-indicator">
-              <span className="pulse-question-badge">?</span>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // 6. Emblem in Center (e.g. Canada, India, Brazil, Argentina, Mexico, Egypt, Kenya, South Africa)
-  const stripeColors = (flagStyle.stripeColors as string[]) || puzzle.colors;
-  const emblem = (flagStyle.emblemEmoji as string) || correctChoice?.emoji || '🌟';
-
   return (
-    <div className="flag-box emblem-flag" aria-label={`Flag of ${country}`}>
-      {/* Background stripes or field */}
-      {stripeColors.length > 0 && (
-        <div
-          className={`emblem-flag-background ${
-            puzzle.id === 'puzzle_canada' || puzzle.id === 'puzzle_mexico'
-              ? 'vertical'
-              : 'horizontal'
-          }`}
-        >
-          {stripeColors.map((col, idx) => (
-            <div
-              key={idx}
-              className="emblem-bg-stripe"
-              style={{ backgroundColor: col }}
-            />
-          ))}
-        </div>
-      )}
+    <div className="flag-hero-frame">
+      {/* Decorative Flagpole Sleeve on Left */}
+      <div className="flagpole-sleeve">
+        <span className="grommet top" />
+        <span className="grommet bottom" />
+      </div>
 
-      {/* Brazil yellow diamond */}
-      {puzzle.id === 'puzzle_brazil' && <div className="brazil-yellow-diamond" />}
-
-      {/* Missing Central Emblem Slot */}
-      <div
-        className={`emblem-slot missing-slot ${
-          snapped ? 'slot-snapped' : 'slot-empty'
-        }`}
-      >
-        {snapped ? (
-          <div className="snapped-piece emblem-piece">
-            {puzzle.id === 'puzzle_canada' && (
-              <span className="canada-maple-leaf">🍁</span>
-            )}
-            {puzzle.id === 'puzzle_india' && (
-              <span className="india-chakra">☸️</span>
-            )}
-            {puzzle.id === 'puzzle_argentina' && (
-              <span className="argentina-sun">🌞</span>
-            )}
-            {puzzle.id === 'puzzle_mexico' && (
-              <span className="mexico-eagle">🦅</span>
-            )}
-            {puzzle.id === 'puzzle_egypt' && (
-              <span className="egypt-eagle">🦅</span>
-            )}
-            {puzzle.id === 'puzzle_brazil' && (
-              <div className="brazil-blue-globe">
-                <span className="globe-emoji">🌐</span>
+      {/* Flag Canvas Content */}
+      <div className="flag-canvas-inner">
+        {/* 1. Circle in Center (Japan, South Korea) */}
+        {layout === 'circle_center' && (
+          <div
+            className="flag-box circle-center-flag"
+            style={{ backgroundColor: (flagStyle.baseColor as string) || '#ffffff' }}
+            aria-label={`Flag of ${country}`}
+          >
+            {/* Corner trigrams for South Korea */}
+            {puzzle.id === 'puzzle_south_korea' && (
+              <div className="korea-trigrams-grid">
+                <span className="trigram tl">☰</span>
+                <span className="trigram tr">☵</span>
+                <span className="trigram bl">☲</span>
+                <span className="trigram br">☷</span>
               </div>
             )}
-            {puzzle.id === 'puzzle_kenya' && (
-              <span className="kenya-shield">🛡️</span>
-            )}
-            {puzzle.id === 'puzzle_south_africa' && (
-              <span className="sa-pall">✳️</span>
-            )}
-            {!['puzzle_canada', 'puzzle_india', 'puzzle_argentina', 'puzzle_mexico', 'puzzle_egypt', 'puzzle_brazil', 'puzzle_kenya', 'puzzle_south_africa'].includes(
-              puzzle.id
-            ) && <span className="snapped-emoji">{emblem}</span>}
+
+            <div
+              className={`missing-slot circle-slot ${
+                snapped ? 'slot-snapped' : 'slot-empty'
+              }`}
+            >
+              {snapped ? (
+                <div className="snapped-piece circle-piece">
+                  {puzzle.id === 'puzzle_japan' ? (
+                    <SunDiscGraphic size={140} color={puzzle.colors[1] || '#bc002d'} />
+                  ) : puzzle.id === 'puzzle_south_korea' ? (
+                    <TaegeukGraphic size={140} />
+                  ) : (
+                    renderPieceGraphic(puzzle.missingDescription, correctChoice?.color, 140)
+                  )}
+                </div>
+              ) : (
+                <div className="pulsing-slot-indicator" title={`Missing ${puzzle.missingDescription}`}>
+                  <span className="pulse-question-badge">?</span>
+                  <div className="slot-silhouette circle-ghost" />
+                  <span className="slot-label-pill">{puzzle.missingDescription}</span>
+                </div>
+              )}
+            </div>
           </div>
-        ) : (
-          <div className="pulsing-slot-indicator">
-            <span className="pulse-question-badge">?</span>
+        )}
+
+        {/* 2. Vertical Stripes (France, Italy, Ireland, Peru) */}
+        {layout === 'stripe_vertical' && (
+          <div
+            className="flag-box stripe-vertical-flag"
+            aria-label={`Flag of ${country}`}
+          >
+            {((flagStyle.stripeColors as string[]) || puzzle.colors).map((col, idx) => {
+              const missingIdx =
+                typeof flagStyle.missingStripeIndex === 'number'
+                  ? flagStyle.missingStripeIndex
+                  : 1;
+              const isMissing = idx === missingIdx;
+
+              if (isMissing) {
+                return (
+                  <div
+                    key={idx}
+                    className={`vertical-stripe-slot missing-slot ${
+                      snapped ? 'slot-snapped' : 'slot-empty'
+                    }`}
+                    style={{
+                      backgroundColor: snapped ? col : 'rgba(255, 255, 255, 0.08)',
+                    }}
+                  >
+                    {snapped ? (
+                      <div
+                        className="snapped-stripe-fill"
+                        style={{ backgroundColor: col }}
+                      />
+                    ) : (
+                      <div className="pulsing-slot-indicator" title={`Missing ${puzzle.missingDescription}`}>
+                        <span className="pulse-question-badge">?</span>
+                        <span className="slot-label-pill">{puzzle.missingDescription}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={idx}
+                  className="vertical-stripe-slot"
+                  style={{ backgroundColor: col }}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {/* 3. Horizontal Stripes (Germany) */}
+        {layout === 'stripe_horizontal' && (
+          <div
+            className="flag-box stripe-horizontal-flag"
+            aria-label={`Flag of ${country}`}
+          >
+            {((flagStyle.stripeColors as string[]) || puzzle.colors).map((col, idx) => {
+              const missingIdx =
+                typeof flagStyle.missingStripeIndex === 'number'
+                  ? flagStyle.missingStripeIndex
+                  : 2;
+              const isMissing = idx === missingIdx;
+
+              if (isMissing) {
+                return (
+                  <div
+                    key={idx}
+                    className={`horizontal-stripe-slot missing-slot ${
+                      snapped ? 'slot-snapped' : 'slot-empty'
+                    }`}
+                    style={{
+                      backgroundColor: snapped ? col : 'rgba(255, 255, 255, 0.08)',
+                    }}
+                  >
+                    {snapped ? (
+                      <div
+                        className="snapped-stripe-fill"
+                        style={{ backgroundColor: col }}
+                      />
+                    ) : (
+                      <div className="pulsing-slot-indicator" title={`Missing ${puzzle.missingDescription}`}>
+                        <span className="pulse-question-badge">?</span>
+                        <span className="slot-label-pill">{puzzle.missingDescription}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={idx}
+                  className="horizontal-stripe-slot"
+                  style={{ backgroundColor: col }}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {/* 4. Canton in Top-Left (USA, Greece, Australia, China) */}
+        {layout === 'canton' && (
+          <div
+            className="flag-box canton-flag"
+            style={{ backgroundColor: (flagStyle.baseColor as string) || puzzle.colors[0] }}
+            aria-label={`Flag of ${country}`}
+          >
+            {/* USA 13 Stripes */}
+            {puzzle.id === 'puzzle_usa' && (
+              <div className="usa-stripes-bg">
+                {Array.from({ length: 13 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="usa-stripe"
+                    style={{ backgroundColor: i % 2 === 0 ? '#b22234' : '#ffffff' }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Greece 9 Stripes */}
+            {puzzle.id === 'puzzle_greece' && (
+              <div className="greece-stripes-bg">
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="greece-stripe"
+                    style={{ backgroundColor: i % 2 === 0 ? '#0d5eaf' : '#ffffff' }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Australia Stars on Blue Fly */}
+            {puzzle.id === 'puzzle_australia' && (
+              <div className="australia-stars-field">
+                <span className="star-commonwealth">★</span>
+                <span className="star-crux a1">★</span>
+                <span className="star-crux a2">★</span>
+                <span className="star-crux a3">★</span>
+                <span className="star-crux a4">★</span>
+                <span className="star-crux a5">★</span>
+              </div>
+            )}
+
+            {/* Missing Canton Slot */}
+            <div
+              className={`canton-slot missing-slot ${
+                snapped ? 'slot-snapped' : 'slot-empty'
+              }`}
+              style={{
+                backgroundColor: snapped ? (flagStyle.cantonColor as string) || '#002868' : 'rgba(0, 0, 0, 0.45)',
+              }}
+            >
+              {snapped ? (
+                <div className="snapped-canton-content">
+                  {puzzle.id === 'puzzle_usa' && <UsCantonGraphic width={220} height={145} />}
+                  {puzzle.id === 'puzzle_greece' && <GreekCantonGraphic size={140} />}
+                  {puzzle.id === 'puzzle_australia' && <UnionJackGraphic width={210} height={135} />}
+                  {puzzle.id === 'puzzle_china' && <ChinaStarsGraphic size={140} />}
+                  {!['puzzle_usa', 'puzzle_greece', 'puzzle_australia', 'puzzle_china'].includes(puzzle.id) &&
+                    renderPieceGraphic(puzzle.missingDescription, correctChoice?.color, 130)}
+                </div>
+              ) : (
+                <div className="pulsing-slot-indicator" title={`Missing ${puzzle.missingDescription}`}>
+                  <span className="pulse-question-badge">?</span>
+                  <span className="slot-label-pill">{puzzle.missingDescription}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 5. Cross (Center or Nordic: Switzerland, Sweden, Norway, UK, Jamaica) */}
+        {layout === 'cross_center' && (
+          <div
+            className="flag-box cross-flag"
+            style={{ backgroundColor: (flagStyle.baseColor as string) || puzzle.colors[0] }}
+            aria-label={`Flag of ${country}`}
+          >
+            {/* Jamaica black and green triangles */}
+            {puzzle.id === 'puzzle_jamaica' && (
+              <div className="jamaica-field">
+                <div className="jamaica-tri top" />
+                <div className="jamaica-tri bottom" />
+                <div className="jamaica-tri left" />
+                <div className="jamaica-tri right" />
+              </div>
+            )}
+
+            <div
+              className={`cross-slot missing-slot ${
+                snapped ? 'slot-snapped' : 'slot-empty'
+              }`}
+            >
+              {snapped ? (
+                <div className="snapped-piece cross-piece">
+                  {puzzle.id === 'puzzle_switzerland' && <SwissCrossGraphic size={160} />}
+                  {puzzle.id === 'puzzle_sweden' && (
+                    <NordicCrossGraphic width={480} height={300} baseColor="#005293" crossColor="#fecb00" />
+                  )}
+                  {puzzle.id === 'puzzle_norway' && (
+                    <NordicCrossGraphic width={480} height={300} baseColor="#ba0c2f" crossColor="#ffffff" innerColor="#00205b" />
+                  )}
+                  {puzzle.id === 'puzzle_uk' && <UnionJackGraphic width={480} height={300} />}
+                  {puzzle.id === 'puzzle_jamaica' && <JamaicaSaltireGraphic width={480} height={300} />}
+                </div>
+              ) : (
+                <div className="pulsing-slot-indicator" title={`Missing ${puzzle.missingDescription}`}>
+                  <span className="pulse-question-badge">?</span>
+                  <span className="slot-label-pill">{puzzle.missingDescription}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 6. Emblem in Center (Canada, India, Brazil, Argentina, Mexico, Egypt, Kenya, South Africa) */}
+        {layout === 'emblem_center' && (
+          <div className="flag-box emblem-flag" aria-label={`Flag of ${country}`}>
+            {/* Background stripes or field */}
+            <div
+              className={`emblem-flag-background ${
+                puzzle.id === 'puzzle_canada' || puzzle.id === 'puzzle_mexico'
+                  ? 'vertical'
+                  : 'horizontal'
+              }`}
+            >
+              {((flagStyle.stripeColors as string[]) || puzzle.colors).map((col, idx) => (
+                <div
+                  key={idx}
+                  className="emblem-bg-stripe"
+                  style={{ backgroundColor: col }}
+                />
+              ))}
+            </div>
+
+            {/* Brazil yellow diamond */}
+            {puzzle.id === 'puzzle_brazil' && <div className="brazil-yellow-diamond" />}
+
+            {/* Missing Central Emblem Slot */}
+            <div
+              className={`emblem-slot missing-slot ${
+                snapped ? 'slot-snapped' : 'slot-empty'
+              }`}
+            >
+              {snapped ? (
+                <div className="snapped-piece emblem-piece">
+                  {puzzle.id === 'puzzle_canada' && <MapleLeafGraphic size={150} color="#d80621" />}
+                  {puzzle.id === 'puzzle_india' && <AshokaChakraGraphic size={135} color="#000080" />}
+                  {puzzle.id === 'puzzle_argentina' && <SunOfMayGraphic size={135} />}
+                  {puzzle.id === 'puzzle_brazil' && <BrazilGlobeGraphic size={135} />}
+                  {puzzle.id === 'puzzle_mexico' && <GoldenEagleGraphic size={135} isMexico />}
+                  {puzzle.id === 'puzzle_egypt' && <GoldenEagleGraphic size={135} />}
+                  {puzzle.id === 'puzzle_kenya' && <MaasaiShieldGraphic size={140} />}
+                  {puzzle.id === 'puzzle_south_africa' && <SouthAfricaPallGraphic width={260} height={160} />}
+                  {!['puzzle_canada', 'puzzle_india', 'puzzle_argentina', 'puzzle_brazil', 'puzzle_mexico', 'puzzle_egypt', 'puzzle_kenya', 'puzzle_south_africa'].includes(
+                    puzzle.id
+                  ) && renderPieceGraphic(puzzle.missingDescription, correctChoice?.color, 135)}
+                </div>
+              ) : (
+                <div className="pulsing-slot-indicator" title={`Missing ${puzzle.missingDescription}`}>
+                  <span className="pulse-question-badge">?</span>
+                  <span className="slot-label-pill">{puzzle.missingDescription}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
