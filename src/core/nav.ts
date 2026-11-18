@@ -87,6 +87,7 @@ export function focusables(): HTMLElement[] {
 
 /** Sets focus on the first focusable element or one with [data-autofocus] */
 export function focusFirst(container?: HTMLElement | null) {
+  if (typeof document === 'undefined') return;
   const root = container ?? (document.querySelector<HTMLElement>('.overlay:last-of-type') ?? document.body);
   const auto = root.querySelector<HTMLElement>('[data-autofocus]:not([disabled])');
   const target = auto ?? focusables()[0];

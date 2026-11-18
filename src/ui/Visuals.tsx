@@ -143,14 +143,18 @@ export function MathVisual({
     }
     case 'compare':
       return (
-        <div className="math-wrap">
+        <div className="math-wrap compare-math-wrap">
           <div className="piles">
-            <div className="pile-side">
+            <div className="pile-side pile-left">
+              <span className="pile-side-tag">👈 Left Pile</span>
               <div className="bignum-mini">{a}</div>
               <CoinGrid n={a} themeId={e} lit={lit(a)} />
             </div>
-            <span className="vs">vs</span>
-            <div className="pile-side">
+            <div className="vs-divider">
+              <span className="vs-badge">VS</span>
+            </div>
+            <div className="pile-side pile-right">
+              <span className="pile-side-tag">Right Pile 👉</span>
               <div className="bignum-mini">{b}</div>
               <CoinGrid n={b} themeId={e} lit={lit(b, a)} alt />
             </div>
@@ -169,8 +173,8 @@ export function MathVisual({
           )}
           {showCoach && (
             <div className="math-coach pop" role="region" aria-label="Math strategy cue">
-              <span className="coach-badge">🧠 Compare Visual</span>
-              <p>Left pile has <b>{a}</b>. Right pile has <b>{b}</b>. Look at which group has more rows!</p>
+              <span className="coach-badge">🧠 Compare Strategy</span>
+              <p>Left pile has <b>{a}</b>. Right pile has <b>{b}</b>. Compare the counts or see which pile is bigger!</p>
             </div>
           )}
         </div>
@@ -401,21 +405,87 @@ export function ShapeSvg({ shape }: { shape: NonNullable<import('../core/types')
 }
 
 /** Number Bonds Bridge: planks already placed, the gap, and what the chosen planks would do. */
-export function BridgeVisual({ a, gap, pick }: { a: number; gap: number; pick: number | null }) {
+export function BridgeVisual({
+  a,
+  gap,
+  target = 10,
+  pick,
+}: {
+  a: number;
+  gap: number;
+  target?: number;
+  pick: number | null;
+}) {
   const over = pick !== null && pick > gap ? Math.min(pick - gap, 6) : 0;
-  const msg = pick === null ? `${a} planks are in place. How many more make 10?`
-    : pick === gap ? 'A perfect fit!' : pick < gap ? `${gap - pick} short. There is still a gap!` : `${pick - gap} too long!`;
+  const msg =
+    pick === null
+      ? `${a} planks are in place. How many more make ${target}?`
+      : pick === gap
+      ? `A perfect fit! ${a} + ${gap} = ${target}! 🎉`
+      : pick < gap
+      ? `${gap - pick} short. There is still a gap!`
+      : `${pick - gap} too long!`;
+
+  // Divide planks into 10-frame rows
+  const rows: number[][] = [];
+  for (let i = 0; i < target; i += 10) {
+    const rowLen = Math.min(10, target - i);
+    rows.push(Array.from({ length: rowLen }, (_, idx) => i + idx));
+  }
+
+  const isCompact = target >= 50;
+
   return (
-    <div className="bridge">
-      <div className="bridge-row">
-        {Array.from({ length: 10 }, (_, i) => {
-          const placed = i < a;
-          const filled = !placed && pick !== null && i - a < pick;
-          return <span key={i} className={`plank${placed ? ' on' : ''}${filled ? ' try' : ''}${filled && pick === gap ? ' fit' : ''}`}>{i + 1}</span>;
-        })}
-        {Array.from({ length: over }, (_, i) => <span key={`o${i}`} className="plank over">✖</span>)}
+    <div className={`bridge bridge-target-${target}${isCompact ? ' compact' : ''}`}>
+      <div className="bridge-target-badge">
+        <span className="btb-icon">🎯</span>
+        <span className="btb-text">
+          Bridge Goal: Make <b>{target}</b>
+        </span>
+        <span className="btb-tier">
+          {target === 10
+            ? '⭐ Tier 1'
+            : target === 20
+            ? '🌟 Tier 2 (Bonds to 20)'
+            : target === 50
+            ? '🚀 Tier 3 (Bonds to 50)'
+            : '👑 Century Bridge (100)'}
+        </span>
       </div>
-      <div className="bridge-water" aria-hidden>🌊🌊🌊🌊🌊</div>
+
+      <div className="bridge-rows-stack">
+        {rows.map((row, rowIdx) => (
+          <div key={rowIdx} className="bridge-row">
+            {row.map((i) => {
+              const placed = i < a;
+              const filled = !placed && pick !== null && i - a < pick;
+              return (
+                <span
+                  key={i}
+                  className={`plank${isCompact ? ' compact' : ''}${placed ? ' on' : ''}${
+                    filled ? ' try' : ''
+                  }${filled && pick === gap ? ' fit' : ''}`}
+                >
+                  {i + 1}
+                </span>
+              );
+            })}
+          </div>
+        ))}
+        {over > 0 && (
+          <div className="bridge-row over-row">
+            {Array.from({ length: over }, (_, i) => (
+              <span key={`o${i}`} className={`plank over${isCompact ? ' compact' : ''}`}>
+                ✖
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bridge-water" aria-hidden>
+        🌊🌊🌊🌊🌊
+      </div>
       <p className="bridge-msg">{msg}</p>
     </div>
   );

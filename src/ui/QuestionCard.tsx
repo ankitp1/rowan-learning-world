@@ -138,7 +138,15 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
   useEffect(() => { alive.current = true; return () => { alive.current = false; cancel.current(); stopSpeaking(); }; }, []);
 
   const say = (text: string) => { setBubble(text); void speak(text); };
-  const prompt = fill(variant === 'plank' ? 'Listen to the sounds. Which picture is it?' : variant === 'bridge' ? 'Fix the bridge! How many planks make 10?' : q.prompt, theme);
+  const target = q.target ?? (((q.a ?? 0) + (q.b ?? 0)) || 10);
+  const prompt = fill(
+    variant === 'plank'
+      ? 'Listen to the sounds. Which picture is it?'
+      : variant === 'bridge'
+      ? `Fix the bridge! How many planks make ${target}?`
+      : q.prompt,
+    theme
+  );
 
   const playBlend = () => {
     if (!q.sounds || !q.word) return;
@@ -341,7 +349,16 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
       );
     }
     if (q.kind === 'follow') return null;
-    if (variant === 'bridge' && q.kind === 'make10') return <BridgeVisual a={q.a ?? 0} gap={q.b ?? 0} pick={reveal ? (q.b ?? 0) : lastPick} />;
+    if (variant === 'bridge' && q.kind === 'make10') {
+      return (
+        <BridgeVisual
+          a={q.a ?? 0}
+          gap={q.b ?? 0}
+          target={target}
+          pick={reveal ? (q.b ?? 0) : lastPick}
+        />
+      );
+    }
     return <MathVisual q={q} theme={theme} hi={hi} hintLevel={level} onCount={runCount} isCounting={hi !== null} />;
   })();
 

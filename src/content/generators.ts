@@ -1,5 +1,5 @@
 import wordPack from './words.json';
-import type { Choice, Question, Theme } from '../core/types';
+import type { Choice, Hint, Question, Theme } from '../core/types';
 import { GROUPS, GROUP_WORDS, PLURALS } from './groups';
 import { DIGRAPHS, EXPLAIN, SIGHT_WORDS, VOWELS, soundsOf, tilesOf } from './phonics';
 
@@ -20,6 +20,8 @@ export interface GenOpts {
   /** Prompts to skip (word or "a+b") so rounds don't repeat. */
   avoid?: string[];
   rng?: () => number;
+  /** Target sum for number bonds (10, 20, 50, 100). Defaults to 10. */
+  target?: number;
 }
 
 type Rng = () => number;
@@ -173,14 +175,16 @@ export function sightQuestion(skill: string, o: GenOpts = {}): Question {
 function numChoices(ans: number, tagged: { n: number; tags: string[] }[], rng: Rng, crossing = false): Choice[] {
   const seen = new Set<number>([ans]);
   const out: Choice[] = [{ id: String(ans), text: String(ans) }];
+  const maxChoice = Math.max(40, ans + 25);
   const add = (n: number, tags: string[]) => {
-    if (n < 0 || n > 40 || seen.has(n) || out.length >= 3) return;
+    if (n < 0 || n > maxChoice || seen.has(n) || out.length >= 3) return;
     seen.add(n);
     out.push({ id: String(n), text: String(n), tags: crossing ? [...tags, 'math:cross10'] : tags });
   };
   for (const t of shuffle(tagged, rng)) add(t.n, t.tags);
   let guard = 0;
-  while (out.length < 3 && guard++ < 30) add(Math.max(0, ans + rint(-3, 3, rng)), []);
+  const spread = ans > 30 ? 5 : 3;
+  while (out.length < 3 && guard++ < 30) add(Math.max(0, ans + rint(-spread, spread, rng)), []);
   return shuffle(out, rng);
 }
 
@@ -229,11 +233,11 @@ export function compareQuestion(skill: string, o: GenOpts = {}): Question {
     const wrongTag = ['math:cmp'];
     return {
       id: qid('cmp'), skill, kind: 'compare', a, b, support: 0,
-      prompt: 'Which pile has more?', say: 'Which pile has more?',
+      prompt: 'Which pile has more?', say: 'Which pile has more? Left pile, right pile, or both the same?',
       choices: [
-        { id: 'L', emoji: '⬅️', text: 'This one', tags: a < b ? wrongTag : [] },
-        { id: 'S', emoji: '🟰', text: 'Same', tags: wrongTag },
-        { id: 'R', emoji: '➡️', text: 'This one', tags: a > b ? wrongTag : [] },
+        { id: 'L', emoji: '👈', text: `Left Pile (${a})`, tags: a < b ? wrongTag : [] },
+        { id: 'S', emoji: '🤝', text: 'Both the Same', tags: a !== b ? wrongTag : [] },
+        { id: 'R', emoji: '👉', text: `Right Pile (${b})`, tags: a > b ? wrongTag : [] },
       ],
       answer: ans, hints, explain: { text: explain, say: explain },
     };
@@ -276,19 +280,94 @@ export function addQuestion(skill: string, o: GenOpts = {}): Question {
 export function make10Question(skill: string, o: GenOpts = {}): Question {
   const rng = o.rng ?? Math.random;
   const d = o.difficulty ?? 1;
-  const a = rint(1, 9, rng);
-  const ans = 10 - a;
+  const target = o.target ?? 10;
+
+  let a: number;
+  let ans: number;
+  let tagged: { n: number; tags: string[] }[] = [];
+
+  if (target === 20) {
+    let tries = 0;
+    do {
+      a = rint(2, 18, rng);
+      ans = 20 - a;
+    } while (o.avoid?.includes(`${a}+${ans}`) && tries++ < 10);
+
+    const off1Plus = ans + 1 <= 20 ? ans + 1 : ans - 2;
+    const off1Minus = ans - 1 >= 1 ? ans - 1 : ans + 2;
+    const teenConfusion = ans <= 10 ? ans + 10 : ans - 10;
+    tagged = [
+      { n: off1Plus, tags: ['math:off1'] },
+      { n: off1Minus, tags: ['math:off1'] },
+      { n: teenConfusion, tags: ['math:teen'] },
+    ];
+  } else if (target === 50) {
+    const candidates = [10, 15, 20, 25, 30, 35, 40, 45, 12, 18, 22, 28, 32, 38];
+    a = pick(candidates, rng);
+    ans = 50 - a;
+    tagged = [
+      { n: ans + 10, tags: ['math:off10'] },
+      { n: ans - 10 > 0 ? ans - 10 : ans + 5, tags: ['math:off10'] },
+      { n: ans + 1, tags: ['math:off1'] },
+    ];
+  } else if (target === 100) {
+    const candidates = [10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 85, 90, 35, 45, 65];
+    a = pick(candidates, rng);
+    ans = 100 - a;
+    tagged = [
+      { n: ans + 10, tags: ['math:off10'] },
+      { n: ans - 10 > 0 ? ans - 10 : ans + 20, tags: ['math:off10'] },
+      { n: ans + 5, tags: ['math:off5'] },
+    ];
+  } else {
+    // Default Target: 10
+    a = rint(1, 9, rng);
+    ans = 10 - a;
+    tagged = [
+      { n: ans + 1, tags: ['math:off1'] },
+      { n: ans - 1, tags: ['math:off1'] },
+    ];
+  }
+
+  const hints: Hint[] =
+    target === 10
+      ? [
+          { text: `Hold up ${a} fingers. How many more to reach 10?`, say: `Hold up ${a} fingers. How many more to reach 10?` },
+          { text: "Let's fill the ten frame.", effect: 'count' },
+          { text: `Count up from ${a} to 10.`, effect: 'reveal' },
+        ]
+      : target === 20
+      ? [
+          { text: `Think: fill to 10 first, then reach 20!`, say: `Fill to 10 first, then reach 20!` },
+          { text: `How many more does ${a} need to reach 20?`, effect: 'count' },
+          { text: `Count up from ${a} to 20.`, effect: 'reveal' },
+        ]
+      : target === 50
+      ? [
+          { text: `Count by tens from ${a} up to 50.`, say: `Count by tens from ${a} up to 50.` },
+          { text: `How many tens and ones make 50?`, effect: 'count' },
+          { text: `Count up from ${a} to 50.`, effect: 'reveal' },
+        ]
+      : [
+          { text: `Think in tens: what plus ${Math.floor(a / 10) * 10} makes 100?`, say: `What plus ${Math.floor(a / 10) * 10} makes 100?` },
+          { text: `Count by tens to 100.`, effect: 'count' },
+          { text: `Count up from ${a} to 100.`, effect: 'reveal' },
+        ];
+
   return {
-    id: qid('m10'), skill, kind: 'make10', a, b: ans, support: d as 0 | 1 | 2,
-    prompt: `${a} + ? = 10`, say: `${a} plus what makes 10?`,
-    choices: numChoices(ans, [{ n: ans + 1, tags: ['math:off1'] }, { n: ans - 1, tags: ['math:off1'] }], rng),
+    id: qid('m10'),
+    skill,
+    kind: 'make10',
+    a,
+    b: ans,
+    target,
+    support: d as 0 | 1 | 2,
+    prompt: `${a} + ? = ${target}`,
+    say: `${a} plus what makes ${target}?`,
+    choices: numChoices(ans, tagged, rng),
     answer: String(ans),
-    hints: [
-      { text: `Hold up ${a} fingers. How many more to reach 10?`, say: `Hold up ${a} fingers. How many more to reach 10?` },
-      { text: "Let's fill the ten frame.", effect: 'count' },
-      { text: `Count up from ${a} to 10.`, effect: 'reveal' },
-    ],
-    explain: { text: `${a} and ${ans} make 10.`, say: `${a} and ${ans} make 10.` },
+    hints,
+    explain: { text: `${a} and ${ans} make ${target}.`, say: `${a} and ${ans} make ${target}.` },
   };
 }
 

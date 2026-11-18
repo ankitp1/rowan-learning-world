@@ -16,13 +16,27 @@ export interface RoundApi {
   answer: (r: AnswerResult) => void;
 }
 
-function RoundInner({ appId, props, children }: { appId: string; props: MiniAppProps; children: (r: RoundApi) => ReactNode }) {
+function RoundInner({
+  appId,
+  props,
+  makeQuestion: customMakeQuestion,
+  children,
+}: {
+  appId: string;
+  props: MiniAppProps;
+  makeQuestion?: (avoid: string[]) => Question;
+  children: (r: RoundApi) => ReactNode;
+}) {
   const { profile, theme, onExit, onComplete } = props;
   const app = appById(appId)!;
   const total = props.rounds ?? 5;
   const tracker = useRef(new Tracker());
   const avoid = useRef<string[]>([]);
+  const customMakeRef = useRef(customMakeQuestion);
+  customMakeRef.current = customMakeQuestion;
+
   const gen = (): Question => {
+    if (customMakeRef.current) return customMakeRef.current(avoid.current);
     const states = statesOf(profile.id);
     const p = pickSkill(profile, app.subject, app.skills, { frustrated: tracker.current.frustrated, states });
     const d = tracker.current.difficulty(baseDifficulty(p.skillId, states));
@@ -94,7 +108,12 @@ function RoundInner({ appId, props, children }: { appId: string; props: MiniAppP
 }
 
 /** Round shell: question loop, progress, adaptive picking, end screen. `children` draws one question. */
-export default function Round(p: { appId: string; props: MiniAppProps; children: (r: RoundApi) => ReactNode }) {
+export default function Round(p: {
+  appId: string;
+  props: MiniAppProps;
+  makeQuestion?: (avoid: string[]) => Question;
+  children: (r: RoundApi) => ReactNode;
+}) {
   const [run, setRun] = useState(0);
   useEffect(() => {
     const again = () => setRun((n) => n + 1);

@@ -257,6 +257,12 @@ export default function Hub({ profile, theme, lastIsland, onIsland, onMission, o
         <WelcomeTourModal
           theme={theme}
           childName={profile.name}
+          profile={profile}
+          onStartMission={() => {
+            localStorage.setItem(`rlw.tourDone.${profile.id}`, 'true');
+            setShowTour(false);
+            onMission();
+          }}
           onFinish={() => {
             localStorage.setItem(`rlw.tourDone.${profile.id}`, 'true');
             setShowTour(false);

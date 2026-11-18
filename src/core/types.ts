@@ -183,6 +183,7 @@ export interface Question {
   a?: number;
   b?: number;
   n?: number;
+  target?: number;
   /** 0 = coins, 1 = number line, 2 = bare numbers. */
   support?: 0 | 1 | 2;
   choices: Choice[];
