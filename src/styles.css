@@ -1288,7 +1288,43 @@ table.skills { width: 100%; border-collapse: collapse; font-size: 16px; } table.
 .flag-choice-emoji {
   font-size: 28px;
   line-height: 1;
-  margin-right: 4px;
+  margin-right: 6px;
+}
+.flag-choice-emoji.pop-in {
+  animation: popInEmoji 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes popInEmoji {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.trivia-hint-btn {
+  background: #fffaf0;
+  color: #b7791f;
+  border: 1.5px solid #ecc94b;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.trivia-hint-btn:hover,
+.trivia-hint-btn:focus {
+  background: #fefcbf;
+  border-color: #d69e2e;
+  transform: scale(1.04);
+}
+.trivia-hint-btn.active {
+  background: #fefcbf;
+  color: #744210;
+  border-color: #b7791f;
+  box-shadow: 0 0 0 3px rgba(236, 201, 75, 0.4);
 }
 
 /* ---------- world explorer passport & stamps ---------- */

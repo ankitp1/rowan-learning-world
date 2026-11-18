@@ -74,6 +74,7 @@ export default function FlagCapitalTrivia({ profile, theme, onExit, onComplete }
   const [selectedChoiceIdx, setSelectedChoiceIdx] = useState<number | null>(null);
   const [answered, setAnswered] = useState<boolean>(false);
   const [gameOver, setGameOver] = useState<boolean>(false);
+  const [hintRevealed, setHintRevealed] = useState<boolean>(false);
 
   // Auto-advance countdown
   const [autoCountdown, setAutoCountdown] = useState<number | null>(null);
@@ -132,6 +133,7 @@ export default function FlagCapitalTrivia({ profile, theme, onExit, onComplete }
     stopSpeaking();
     setSelectedChoiceIdx(null);
     setAnswered(false);
+    setHintRevealed(false);
 
     const nextRound = currentRound + 1;
     if (isMission && nextRound >= totalQuestions) {
@@ -162,9 +164,22 @@ export default function FlagCapitalTrivia({ profile, theme, onExit, onComplete }
     setScores([0, 0]);
     setCurrentRound(0);
     setGameOver(false);
+    setHintRevealed(false);
 
     // Read question and options aloud
     void speak(formatTriviaSpeech(firstQ, player1.name, Boolean(multiplayer)));
+  };
+
+  const handleToggleHint = () => {
+    if (answered || !currentQuestion) return;
+    stopSpeaking();
+    if (!hintRevealed) {
+      sfx.soft();
+      setHintRevealed(true);
+      void speak("Here's a hint! Country flags are now revealed on the choices!");
+    } else {
+      setHintRevealed(false);
+    }
   };
 
   const handleAnswer = (choiceIdx: number) => {
@@ -243,6 +258,18 @@ export default function FlagCapitalTrivia({ profile, theme, onExit, onComplete }
       stopSpeaking();
     };
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (answered || !currentQuestion) return;
+      if (e.key === 'h' || e.key === 'H') {
+        e.preventDefault();
+        handleToggleHint();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [answered, currentQuestion, hintRevealed]);
 
   // 1. Initial Mode Selection: Solo or 2-Player
   if (multiplayer === null) {
@@ -431,6 +458,16 @@ export default function FlagCapitalTrivia({ profile, theme, onExit, onComplete }
               </span>
             </div>
             <div className="row align-center gap-8">
+              {!answered && (
+                <button
+                  className={`icon-btn trivia-hint-btn${hintRevealed ? ' active' : ''}`}
+                  onClick={handleToggleHint}
+                  aria-label={hintRevealed ? 'Flags shown on choices' : 'Show flag hints for choices'}
+                  title="Need a hint? Tap to reveal country flags on the choices!"
+                >
+                  {hintRevealed ? '💡 Flags Shown' : '💡 Flag Hint'}
+                </button>
+              )}
               <button
                 className="icon-btn trivia-speech-btn"
                 aria-label="Read question and options aloud"
@@ -478,6 +515,7 @@ export default function FlagCapitalTrivia({ profile, theme, onExit, onComplete }
                   ? 'choice gone'
                   : 'choice'
                 : 'choice';
+              const showFlag = Boolean(c.emoji && (hintRevealed || answered));
               return (
                 <button
                   key={i}
@@ -488,7 +526,7 @@ export default function FlagCapitalTrivia({ profile, theme, onExit, onComplete }
                   aria-label={`Option ${OPTION_LETTERS[i]}: ${c.text}`}
                 >
                   <span className="choice-badge">{OPTION_LETTERS[i]}</span>
-                  {c.emoji && <span className="ce flag-choice-emoji">{c.emoji}</span>}
+                  {showFlag && <span className="ce flag-choice-emoji pop-in">{c.emoji}</span>}
                   <span className="ct font-bold">{c.text}</span>
                 </button>
               );

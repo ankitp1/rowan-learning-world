@@ -184,4 +184,30 @@ describe('FlagCapitalTrivia Component', () => {
     expect(seenQuestionTexts.size).toBe(10);
     unmount();
   });
+
+  it('hides flags in options by default and reveals them only when hint is requested', () => {
+    const { unmount } = render(
+      <FlagCapitalTrivia
+        profile={mockProfile}
+        theme={mockTheme}
+        onExit={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByText(/Solo Explorer/i));
+    fireEvent.click(screen.getByText(/Start Journey!/i));
+
+    // Initially, before asking for a hint, the flag-choice-emoji elements should NOT be visible
+    expect(document.querySelectorAll('.flag-choice-emoji').length).toBe(0);
+
+    // Click the hint button
+    const hintBtn = screen.getByRole('button', { name: /Show flag hints for choices/i });
+    expect(hintBtn).toBeTruthy();
+    fireEvent.click(hintBtn);
+
+    // Flags in options are now revealed!
+    expect(document.querySelectorAll('.flag-choice-emoji').length).toBeGreaterThanOrEqual(1);
+
+    unmount();
+  });
 });
