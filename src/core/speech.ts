@@ -214,9 +214,9 @@ export function playCharacterAudio(themeId: string, clipKey: string): Promise<bo
 export async function speakThemePraise(theme: Theme, praiseIndex?: number, childName?: string): Promise<void> {
   const praises = theme.praise || [];
   const idx = praiseIndex !== undefined ? praiseIndex : Math.floor(Math.random() * (praises.length || 1));
-  const name = childName?.trim() || 'friend';
+  const name = childName?.trim() || 'Rowan';
   const rawText = praises[idx] || 'Great job, {name}!';
-  const text = rawText.replace(/\{name\}/g, name);
+  const text = rawText.replaceAll('{name}', name);
   const isRowan = /^rowan$/i.test(name);
 
   if (isRowan) {
@@ -238,9 +238,9 @@ export async function speakThemePraise(theme: Theme, praiseIndex?: number, child
 export async function speakThemeEncouragement(theme: Theme, encourageIndex?: number, childName?: string): Promise<void> {
   const list = theme.encouragements || [];
   const idx = encourageIndex !== undefined ? encourageIndex : Math.floor(Math.random() * (list.length || 1));
-  const name = childName?.trim() || 'friend';
+  const name = childName?.trim() || 'Rowan';
   const rawText = list[idx] || "You've got this, {name}! Let's try again.";
-  const text = rawText.replace(/\{name\}/g, name);
+  const text = rawText.replaceAll('{name}', name);
   const isRowan = /^rowan$/i.test(name);
 
   if (isRowan) {
@@ -261,14 +261,14 @@ export async function speakThemeEncouragement(theme: Theme, encourageIndex?: num
  */
 export async function speakThemeGreeting(themeId: string, childName?: string, fallbackText?: string): Promise<void> {
   stopSpeaking();
-  const isRowan = Boolean(childName && /^rowan$/i.test(childName.trim()));
+  const name = childName?.trim() || 'Rowan';
+  const isRowan = Boolean(name && /^rowan$/i.test(name));
   if (isRowan) {
     const played = await playCharacterAudio(themeId, 'greeting');
     if (played) return;
   }
   if (fallbackText) {
-    const name = childName?.trim() || 'friend';
-    await speak(fallbackText.replace(/\{name\}/g, name));
+    await speak(fallbackText.replaceAll('{name}', name));
   }
 }
 

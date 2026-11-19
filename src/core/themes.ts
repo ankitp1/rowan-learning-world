@@ -407,3 +407,31 @@ export function applyTheme(t: Theme) {
     import('./speech').then(({ setThemeVoice }) => setThemeVoice(t.helper.voiceStyle));
   }
 }
+
+/** Resolves {name} in theme praise text with child's name (defaults to 'Rowan') */
+export function formatThemePraise(theme: Theme, idx: number, childName?: string): string {
+  const name = childName?.trim() || 'Rowan';
+  const list = theme.praise || [];
+  const raw = list[idx] || 'Great job, {name}!';
+  return raw.replaceAll('{name}', name);
+}
+
+/** Resolves {name} in theme encouragement text with child's name (defaults to 'Rowan') */
+export function formatThemeEncouragement(theme: Theme, idx: number, childName?: string): string {
+  const name = childName?.trim() || 'Rowan';
+  const list = theme.encouragements || [];
+  const raw = list[idx] || "You've got this, {name}! Let's try again.";
+  return raw.replaceAll('{name}', name);
+}
+
+/** Resolves {name} in theme mapTitle text with child's name (defaults to 'Rowan') */
+export function formatThemeMapTitle(theme: Theme, childName?: string): string {
+  const name = childName?.trim() || 'Rowan';
+  return theme.mapTitle.replaceAll('{name}', name);
+}
+
+/** Resolves {name} in theme helper personality blurb with child's name (defaults to 'Rowan') */
+export function formatThemePersonality(theme: Theme, childName?: string): string {
+  const name = childName?.trim() || 'Rowan';
+  return theme.helper.personality.replaceAll('{name}', name);
+}

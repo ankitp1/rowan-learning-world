@@ -43,7 +43,7 @@ export default function MysteryStory({ profile, theme, onExit, onComplete }: Min
   const cancel = useRef<() => void>(() => {});
   const questions = useRef(story.questions.map(toQuestion)).current;
   const pg = story.pages[page];
-  const text = pg.text.replace('{name}', profile.name);
+  const text = pg.text.replaceAll('{name}', profile.name || 'Rowan');
 
   // Auto-collect clue when reaching a clue page
   useEffect(() => {

@@ -145,7 +145,8 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
       : variant === 'bridge'
       ? `Fix the bridge! How many planks make ${target}?`
       : q.prompt,
-    theme
+    theme,
+    profile.name
   );
 
   const playBlend = () => {
@@ -261,14 +262,14 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
     const praise = theme.praise[praiseIdx] || 'Great job!';
     const explain = level > 0 || !correct;
     const starNote = limitSec > 0 && starsEarned > 1 ? ` ⚡ +${starsEarned} Stars Speed Bonus!` : '';
-    setBubble((explain ? fill(q.explain.text, theme) : praise) + starNote);
+    setBubble((explain ? fill(q.explain.text, theme, profile.name) : fill(praise, theme, profile.name)) + starNote);
     cancel.current();
     if (explain) {
-      await speakThemePraise(theme, praiseIdx);
-      await speak(fill(q.explain.say ?? q.explain.text, theme));
+      await speakThemePraise(theme, praiseIdx, profile.name);
+      await speak(fill(q.explain.say ?? q.explain.text, theme, profile.name));
       await sleep(500);
     } else {
-      await speakThemePraise(theme, praiseIdx);
+      await speakThemePraise(theme, praiseIdx, profile.name);
       await sleep(350);
     }
     if (alive.current) onResult(res);
@@ -289,8 +290,8 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
     const encList = theme.encouragements || [];
     const encIdx = Math.floor(Math.random() * (encList.length || 1));
     const encouragement = encList[encIdx] ?? "That was a good try! Let's listen closely and try another choice!";
-    setBubble(fill(encouragement, theme));
-    void speakThemeEncouragement(theme, encIdx);
+    setBubble(fill(encouragement, theme, profile.name));
+    void speakThemeEncouragement(theme, encIdx, profile.name);
   }
 
   const tapTile = (i: number) => {

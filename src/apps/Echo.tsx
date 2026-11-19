@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { awardStars } from '../core/engine';
-import { sfx, speak, stopSpeaking } from '../core/speech';
+import { sfx, speak, speakThemePraise, stopSpeaking } from '../core/speech';
 import type { MiniAppProps, Theme } from '../core/types';
 import { Confetti } from '../ui/Art';
 import { GameShell, useStoredLevel } from '../ui/GameShell';
@@ -10,7 +10,7 @@ import { GEMS } from './codeBreaker';
 const NOTES = [262, 330, 392, 523, 440, 587];
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function Game({ level, theme, onWin, onNext, onExit }: { level: number; theme: Theme; onWin: (stars: number) => void; onNext: () => void; onExit: () => void }) {
+function Game({ level, theme, childName, onWin, onNext, onExit }: { level: number; theme: Theme; childName?: string; onWin: (stars: number) => void; onNext: () => void; onExit: () => void }) {
   const pads = level < 2 ? 4 : level < 4 ? 5 : 6;
   const target = Math.min(4 + level, 12);
   const step = Math.max(380, 700 - level * 40);
@@ -59,7 +59,7 @@ function Game({ level, theme, onWin, onNext, onExit }: { level: number; theme: T
         if (s.length >= target) {
           setPhase('won'); sfx.chest();
           onWin(mistakes === 0 ? 3 : 2);
-          void speak(theme.praise[Math.floor(Math.random() * theme.praise.length)]);
+          void speakThemePraise(theme, undefined, childName || 'Rowan');
           return;
         }
         setPhase('watch');
@@ -111,5 +111,5 @@ function Game({ level, theme, onWin, onNext, onExit }: { level: number; theme: T
 /** Echo Sequence: copy a growing pattern of lights and notes. No failing: a slip just replays the pattern. */
 export default function Echo({ profile, theme, onExit }: MiniAppProps) {
   const [level, setLevel] = useStoredLevel(`rlw.echo.${profile.id}`);
-  return <Game key={level} level={level} theme={theme} onWin={(s) => awardStars(profile.id, s)} onNext={() => setLevel(level + 1)} onExit={onExit} />;
+  return <Game key={level} level={level} theme={theme} childName={profile.name} onWin={(s) => awardStars(profile.id, s)} onNext={() => setLevel(level + 1)} onExit={onExit} />;
 }

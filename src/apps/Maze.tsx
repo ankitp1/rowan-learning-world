@@ -59,7 +59,8 @@ export default function Maze({ profile, theme, onExit, onComplete }: MiniAppProp
         awardStars(profile.id, 2);
         const lvl = level + 1;
         setGameLevel(storeKey, lvl);
-        say(theme.praise[Math.floor(Math.random() * theme.praise.length)]);
+        const raw = theme.praise[Math.floor(Math.random() * theme.praise.length)] || 'Great job!';
+        say(raw.replaceAll('{name}', profile.name || 'Rowan'));
       } else say(`Collect all the numbers first. Next is ${want}.`);
     }
   }, [level, profile.id, say, storeKey, theme.container.name, theme.praise]);

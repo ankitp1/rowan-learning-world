@@ -45,7 +45,7 @@ export function ThemePickerModal({
     stopSpeaking();
     setPlayingId(t.id);
     const quote = SAMPLE_QUOTES[t.id] ?? t.praise[0] ?? 'Hello!';
-    void speakThemeSample(t.id, quote.replace('{name}', childName)).then(() => {
+    void speakThemeSample(t.id, quote.replaceAll('{name}', childName || 'Rowan')).then(() => {
       setPlayingId((cur) => (cur === t.id ? null : cur));
     });
   };
@@ -54,7 +54,7 @@ export function ThemePickerModal({
     sfx.good();
     onSelect(t.id);
     const quote = SAMPLE_QUOTES[t.id] ?? t.praise[0] ?? 'Hello!';
-    void speakThemeGreeting(t.id, childName, quote.replace('{name}', childName));
+    void speakThemeGreeting(t.id, childName || 'Rowan', quote.replaceAll('{name}', childName || 'Rowan'));
     onClose();
   };
 
@@ -92,7 +92,7 @@ export function ThemePickerModal({
                 </div>
                 <h3>{t.emoji} {t.name}</h3>
                 <span className="helper-role">{t.helper.name} · {t.helper.role}</span>
-                <p className="helper-blurb">{t.helper.personality}</p>
+                <p className="helper-blurb">{t.helper.personality.replaceAll('{name}', childName || 'Rowan')}</p>
 
                 <div className="swatches" title="Theme color palette">
                   <span className="swatch" style={{ background: t.colors.bg1 }} />

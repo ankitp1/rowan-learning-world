@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { sfx, speak, stopSpeaking } from '../core/speech';
+import { sfx, speak, speakThemeGreeting, stopSpeaking } from '../core/speech';
 import type { Profile, Theme } from '../core/types';
 import { HelperAvatar } from './Art';
 import { useBackHandler } from '../core/nav';
@@ -90,16 +90,16 @@ export function WelcomeTourModal({
     return true;
   }, true);
 
-  // Play opening chime when tour opens
+  // Play opening chime and theme companion greeting when tour opens
   useEffect(() => {
     sfx.good();
-    void speak(
-      `Welcome to your learning world, ${role} ${childName}! I am ${theme.helper.name}, your companion! Let's get ready for your mission!`
-    );
+    const name = childName?.trim() || profile?.name?.trim() || 'Rowan';
+    const fallback = `Welcome to your learning world, ${role} ${name}! I am ${theme.helper.name}, your companion! Let's get ready for your mission!`;
+    void speakThemeGreeting(theme.id, name, fallback);
     return () => {
       stopSpeaking();
     };
-  }, []);
+  }, [theme.id, childName, profile?.name, role]);
 
   const realms: RealmInfo[] = [
     {

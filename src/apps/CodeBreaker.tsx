@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { awardStars } from '../core/engine';
-import { sfx, speak, stopSpeaking } from '../core/speech';
+import { sfx, speak, speakThemePraise, stopSpeaking } from '../core/speech';
 import type { MiniAppProps, Theme } from '../core/types';
 import { Confetti } from '../ui/Art';
 import { GameShell, useStoredLevel } from '../ui/GameShell';
@@ -16,8 +16,8 @@ const Feedback = ({ exact, near, len }: { exact: number; near: number; len: numb
   </span>
 );
 
-function Game({ level, theme, onWin, onNext, onExit }: {
-  level: number; theme: Theme; onWin: (stars: number) => void; onNext: (won: boolean) => void; onExit: () => void;
+function Game({ level, theme, childName, onWin, onNext, onExit }: {
+  level: number; theme: Theme; childName?: string; onWin: (stars: number) => void; onNext: (won: boolean) => void; onExit: () => void;
 }) {
   const spec = codeSpec(level);
   const secret = useMemo(() => makeSecret(spec.len, spec.colors, spec.repeats), [spec.len, spec.colors, spec.repeats]);
@@ -53,7 +53,7 @@ function Game({ level, theme, onWin, onNext, onExit }: {
       setStatus('won'); sfx.chest();
       const stars = help === 0 ? 3 : 2;
       onWin(stars);
-      void speak(theme.praise[Math.floor(Math.random() * theme.praise.length)]);
+      void speakThemePraise(theme, undefined, childName || 'Rowan');
     } else if (next.length >= spec.maxTries) {
       setStatus('lost'); onWin(1);
       setBubble("That was a tough one! Let's try a new code.");
@@ -171,7 +171,7 @@ export default function CodeBreaker({ profile, theme, onExit }: MiniAppProps) {
   const [round, setRound] = useState(0);
   return (
     <Game
-      key={`${level}-${round}`} level={level} theme={theme}
+      key={`${level}-${round}`} level={level} theme={theme} childName={profile.name}
       onWin={(stars) => { awardStars(profile.id, stars); }}
       onNext={(won) => { stopSpeaking(); if (won) setLevel(level + 1); else setRound(round + 1); }}
       onExit={onExit}

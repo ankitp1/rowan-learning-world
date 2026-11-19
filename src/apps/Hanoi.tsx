@@ -7,8 +7,8 @@ import { GameShell, useStoredLevel } from '../ui/GameShell';
 import { Bubble, HelperButton } from '../ui/QuestionCard';
 import { canMove, disksFor, isWon, move, optimalMoves, solve, startState, topDisk } from './hanoi';
 
-function Game({ n, level, theme, onWin, onNext, onExit }: {
-  n: number; level: number; theme: Theme; onWin: (stars: number) => void; onNext: () => void; onExit: () => void;
+function Game({ n, level, theme, childName, onWin, onNext, onExit }: {
+  n: number; level: number; theme: Theme; childName?: string; onWin: (stars: number) => void; onNext: () => void; onExit: () => void;
 }) {
   const [s, setS] = useState(startState(n));
   const [sel, setSel] = useState<number | null>(null);
@@ -39,7 +39,8 @@ function Game({ n, level, theme, onWin, onNext, onExit }: {
       sfx.chest();
       const stars = moves + 1 === best ? 4 : 2;
       onWin(stars);
-      const m = moves + 1 === best ? 'Perfect! The fewest possible moves!' : theme.praise[0];
+      const raw = moves + 1 === best ? 'Perfect! The fewest possible moves!' : (theme.praise[0] || 'Great job!');
+      const m = raw.replaceAll('{name}', childName || 'Rowan');
       setBubble(m); void speak(m);
     }
   };
@@ -108,7 +109,7 @@ export default function Hanoi({ profile, theme, onExit }: MiniAppProps) {
   const n = disksFor(level);
   return (
     <Game
-      key={`${level}-${round}`} n={n} level={level} theme={theme}
+      key={`${level}-${round}`} n={n} level={level} theme={theme} childName={profile.name}
       onWin={(stars) => awardStars(profile.id, stars)}
       onNext={() => { stopSpeaking(); if (level < 4) setLevel(level + 1); else setRound(round + 1); }}
       onExit={onExit}

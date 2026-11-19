@@ -182,9 +182,9 @@ export default function Hub({ profile, theme, lastIsland, onIsland, onMission, o
           className="hub-mission-card"
           data-autofocus={!lastIsland ? '' : undefined}
           onClick={onMission}
-          onFocus={() => onDwell(`Today's Mission: ${theme.mapTitle.replace('{name}', profile.name)}`)}
+          onFocus={() => onDwell(`Today's Mission: ${theme.mapTitle.replaceAll('{name}', profile.name || 'Rowan')}`)}
           onBlur={onLeave}
-          aria-label={`Start a mission - Today's Mission: ${theme.mapTitle.replace('{name}', profile.name)}`}
+          aria-label={`Start a mission - Today's Mission: ${theme.mapTitle.replaceAll('{name}', profile.name || 'Rowan')}`}
         >
           <div className="mission-art-box">
             <span className="mission-badge-emoji">{theme.pieces[0]}</span>
@@ -192,7 +192,7 @@ export default function Hub({ profile, theme, lastIsland, onIsland, onMission, o
           </div>
           <div className="mission-details">
             <span className="mission-tag">Today's Mission</span>
-            <h2 className="mission-title">{theme.mapTitle.replace('{name}', profile.name)}</h2>
+            <h2 className="mission-title">{theme.mapTitle.replaceAll('{name}', profile.name || 'Rowan')}</h2>
             <div className="mission-dots" aria-label="Activities in this mission">
               <span className="m-dot done"></span>
               <span className="m-dot done"></span>

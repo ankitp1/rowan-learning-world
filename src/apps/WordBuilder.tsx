@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { diagnoseWord } from '../content/generators';
+import { diagnoseWord, fill } from '../content/generators';
 import { focusFirst } from '../core/nav';
 import { sfx, soundOut, speak, speakSound, speakThemePraise, stopSpeaking } from '../core/speech';
 import type { MiniAppProps, Question } from '../core/types';
@@ -114,9 +114,9 @@ function Board({ r, props }: { r: RoundApi; props: MiniAppProps }) {
     const praiseIdx = Math.floor(Math.random() * (theme.praise?.length || 1));
     const praise = theme.praise[praiseIdx] || 'Great job!';
     const explain = !correct || level > 0;
-    setBubble(explain ? q.explain.text : praise);
-    await speakThemePraise(theme, praiseIdx);
-    if (explain) await speak(q.explain.say ?? q.explain.text);
+    setBubble(explain ? fill(q.explain.text, theme, profile.name) : fill(praise, theme, profile.name));
+    await speakThemePraise(theme, praiseIdx, profile.name);
+    if (explain) await speak(fill(q.explain.say ?? q.explain.text, theme, profile.name));
     await sleep(500);
     if (alive.current) r.answer({ correct, given, expected: q.word!, hintsUsed: level, tags, ms: Date.now() - t0.current });
   }

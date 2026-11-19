@@ -10,7 +10,7 @@ import { makeRound, roundSpec } from './missing';
 const ROUNDS = 5;
 const shuffle = <T,>(a: T[]) => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
 
-function Game({ level, theme, onWin, onNext, onExit }: { level: number; theme: Theme; onWin: (stars: number) => void; onNext: (up: boolean) => void; onExit: () => void }) {
+function Game({ level, theme, childName, onWin, onNext, onExit }: { level: number; theme: Theme; childName?: string; onWin: (stars: number) => void; onNext: (up: boolean) => void; onExit: () => void }) {
   const [idx, setIdx] = useState(0);
   const [clean, setClean] = useState(0);
   const round = useMemo(() => makeRound(level), [level, idx]);
@@ -62,7 +62,8 @@ function Game({ level, theme, onWin, onNext, onExit }: { level: number; theme: T
         setPhase('done'); sfx.good();
         const ok = !slip;
         if (ok) setClean((c) => c + 1);
-        setBubble(ok ? theme.praise[Math.floor(Math.random() * theme.praise.length)] : 'You found it! Good looking.');
+        const rawPraise = theme.praise[Math.floor(Math.random() * theme.praise.length)] || 'Great job!';
+        setBubble(ok ? rawPraise.replaceAll('{name}', childName || 'Rowan') : 'You found it! Good looking.');
         void speak(ok ? 'You remembered it!' : 'You found it!');
         timer.current = setTimeout(() => {
           if (!alive.current) return;
@@ -132,7 +133,7 @@ export default function WhatsMissing({ profile, theme, onExit }: MiniAppProps) {
   const [run, setRun] = useState(0);
   return (
     <Game
-      key={`${level}-${run}`} level={level} theme={theme}
+      key={`${level}-${run}`} level={level} theme={theme} childName={profile.name}
       onWin={(clean) => awardStars(profile.id, clean)}
       onNext={(up) => { if (up) setLevel(level + 1); else setRun(run + 1); }}
       onExit={onExit}

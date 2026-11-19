@@ -35,14 +35,16 @@ const rint = (lo: number, hi: number, rng: Rng) => lo + Math.floor(rng() * (hi -
 let counter = 0;
 const qid = (s: string) => `${s}#${++counter}`;
 
-/** Replace {thing} {things} {container} {thief} in generated text with the theme's words. */
-export function fill(text: string | undefined, t: Theme): string {
+/** Replace {thing} {things} {container} {thief} {name} in generated text with the theme's words and child's name. */
+export function fill(text: string | undefined, t: Theme, childName?: string): string {
   if (!text) return '';
+  const name = childName?.trim() || 'Rowan';
   return text
     .replaceAll('{things}', t.collectible.many)
     .replaceAll('{thing}', t.collectible.one)
     .replaceAll('{container}', t.container.name)
-    .replaceAll('{thief}', t.thief.name);
+    .replaceAll('{thief}', t.thief.name)
+    .replaceAll('{name}', name);
 }
 
 /* ---------------- error diagnosis ---------------- */
