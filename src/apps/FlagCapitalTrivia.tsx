@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FLAG_CAPITAL_LIBRARY, type FlagCapitalItem } from '../content/flagsCapitals';
-import { awardStars } from '../core/engine';
+import { awardStars, shuffleArray } from '../core/engine';
 import { awardPassportStamp } from '../core/passport';
 import { sfx, speak, speakThemeEncouragement, speakThemePraise, stopSpeaking } from '../core/speech';
 import type { MiniAppProps } from '../core/types';
@@ -125,7 +125,10 @@ export default function FlagCapitalTrivia({ profile, theme, onExit, onComplete }
     const picked = candidates[Math.floor(Math.random() * candidates.length)];
     sessionAskedIdsRef.current.add(picked.id);
     saveSeenQuestionId(profile.id, picked.id);
-    return picked;
+    return {
+      ...picked,
+      choices: shuffleArray(picked.choices),
+    };
   };
 
   const nextTurn = () => {

@@ -4,7 +4,7 @@ import {
   type CityChoice,
   type DetectiveCase,
 } from '../content/geoDetective';
-import { awardStars } from '../core/engine';
+import { awardStars, shuffleArray } from '../core/engine';
 import { focusFirst } from '../core/nav';
 import { awardPassportStamp } from '../core/passport';
 import { sfx, speak, speakThemeEncouragement, speakThemePraise, stopSpeaking } from '../core/speech';
@@ -41,7 +41,10 @@ export default function GeoDetective({ profile, theme, onExit, onComplete }: Min
     }
     const picked = pool[Math.floor(Math.random() * pool.length)];
     sessionAskedIdsRef.current.add(picked.id);
-    return picked;
+    return {
+      ...picked,
+      choices: shuffleArray(picked.choices),
+    };
   }, []);
 
   // Start a new case

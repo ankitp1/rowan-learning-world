@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { awardStars } from '../core/engine';
+import { awardStars, shuffleArray } from '../core/engine';
 import { focusFirst } from '../core/nav';
 import { sfx, speak, stopSpeaking } from '../core/speech';
 import type { MiniAppProps } from '../core/types';
@@ -52,7 +52,10 @@ export default function WorldExplorer({ profile, theme, onExit, onComplete }: Mi
     if (unasked.length === 0) askedIdsRef.current.clear();
     const picked = pool[Math.floor(Math.random() * pool.length)];
     askedIdsRef.current.add(picked.id);
-    return picked;
+    return {
+      ...picked,
+      choices: shuffleArray(picked.choices),
+    };
   }, []);
 
   const startRound = useCallback((q: GeoQuestion) => {

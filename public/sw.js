@@ -1,5 +1,5 @@
 // Rowan's Learning World Service Worker
-const CACHE = 'rlw-v15';
+const CACHE = 'rlw-v16';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();

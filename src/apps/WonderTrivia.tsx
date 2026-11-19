@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { WONDER_TRIVIA_LIBRARY, type WonderTriviaItem } from '../content/wonderTrivia';
-import { awardStars } from '../core/engine';
+import { awardStars, shuffleArray } from '../core/engine';
 import { sfx, speak, speakThemeEncouragement, speakThemePraise, stopSpeaking } from '../core/speech';
 import type { MiniAppProps } from '../core/types';
 import { Confetti } from '../ui/Art';
@@ -134,7 +134,10 @@ export default function WonderTrivia({ profile, theme, onExit, onComplete }: Min
 
     sessionAskedIdsRef.current.add(picked.id);
     saveSeenQuestionId(profile.id, picked.id);
-    return picked;
+    return {
+      ...picked,
+      choices: shuffleArray(picked.choices),
+    };
   };
 
   const nextTurn = () => {

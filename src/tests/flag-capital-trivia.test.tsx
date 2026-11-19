@@ -20,6 +20,7 @@ vi.mock('../core/speech', () => ({
 
 vi.mock('../core/engine', () => ({
   awardStars: vi.fn(),
+  shuffleArray: <T,>(arr: readonly T[]): T[] => [...arr],
 }));
 
 afterEach(() => {

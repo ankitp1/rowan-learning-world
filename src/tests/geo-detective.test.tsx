@@ -21,6 +21,7 @@ vi.mock('../core/speech', () => ({
 const mockAwardStars = vi.fn();
 vi.mock('../core/engine', () => ({
   awardStars: (...args: any[]) => mockAwardStars(...args),
+  shuffleArray: <T,>(arr: readonly T[]): T[] => [...arr],
 }));
 
 const mockAwardPassportStamp = vi.fn().mockReturnValue(true);

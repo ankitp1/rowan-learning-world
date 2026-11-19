@@ -4,7 +4,7 @@ import {
   type FlagPuzzleChoice,
   type FlagPuzzleItem,
 } from '../content/flagPuzzles';
-import { awardStars } from '../core/engine';
+import { awardStars, shuffleArray } from '../core/engine';
 import { focusFirst } from '../core/nav';
 import { awardPassportStamp } from '../core/passport';
 import { sfx, speak, speakThemePraise, stopSpeaking } from '../core/speech';
@@ -90,7 +90,10 @@ export default function CompleteTheFlag({
     }
     const picked = pool[Math.floor(Math.random() * pool.length)];
     seenPuzzleIdsRef.current.add(picked.id);
-    return picked;
+    return {
+      ...picked,
+      choices: shuffleArray(picked.choices),
+    };
   }, []);
 
   const formatPuzzlePrompt = useCallback((puzzle: FlagPuzzleItem): string => {

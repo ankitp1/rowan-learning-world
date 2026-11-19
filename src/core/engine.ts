@@ -413,3 +413,15 @@ export function countMission(profileId: string) {
 
 export const skillLabel = (id: string) => skillById(id)?.name ?? id;
 export { ladderIndex };
+
+/** Fisher-Yates array shuffle. Returns a new shuffled array without mutating the original. */
+export function shuffleArray<T>(arr: readonly T[]): T[] {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = result[i];
+    result[i] = result[j];
+    result[j] = temp;
+  }
+  return result;
+}
