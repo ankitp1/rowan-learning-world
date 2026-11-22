@@ -9,6 +9,7 @@ import { applyTheme, themeById } from './core/themes';
 import type { Subject } from './core/types';
 import { Scenery } from './ui/Art';
 import Hub, { IslandMenu, type IslandKey } from './screens/Hub';
+import DailyVoyage from './screens/DailyVoyage';
 import Mission from './screens/Mission';
 import Placement from './screens/Placement';
 import TimeGuard from './screens/TimeGuard';
@@ -19,6 +20,7 @@ import ParentHome from './screens/parent/ParentHome';
 type Route =
   | { name: 'who' }
   | { name: 'hub' }
+  | { name: 'voyage'; initialTrack?: 'reading' | 'math' }
   | { name: 'island'; key: IslandKey }
   | { name: 'play'; appId: string; from: IslandKey }
   | { name: 'mission' }
@@ -31,6 +33,7 @@ function startFromHash(): { route: Route; pid?: string } {
   const [name, arg] = location.hash.slice(1).split(':');
   if (!pid || !name) return { route: { name: 'who' } };
   if (name === 'hub') return { pid, route: { name: 'hub' } };
+  if (name === 'voyage') return { pid, route: { name: 'voyage' } };
   if (name === 'mission') return { pid, route: { name: 'mission' } };
   if (name === 'parent') return { pid, route: { name: 'parent' } };
   if (name === 'island') return { pid, route: { name: 'island', key: arg as IslandKey } };
@@ -73,7 +76,7 @@ export default function App() {
     setRoute((r) => {
       switch (r.name) {
         case 'play': return { name: 'island', key: r.from };
-        case 'island': case 'mission': return { name: 'hub' };
+        case 'island': case 'mission': case 'voyage': return { name: 'hub' };
         case 'placement': return r.fromParent ? { name: 'parent' } : profile?.placementDone ? { name: 'hub' } : { name: 'who' };
         case 'parent': return profile ? { name: 'hub' } : { name: 'who' };
         case 'hub': return { name: 'who' };
@@ -113,8 +116,22 @@ export default function App() {
         lastIsland={lastIsland}
         onIsland={(key) => { setLastIsland(key); setRoute({ name: 'island', key }); }}
         onMission={() => setRoute({ name: 'mission' })}
+        onVoyage={(track) => setRoute({ name: 'voyage', initialTrack: track })}
         onSwitch={() => setRoute({ name: 'who' })}
         onGrownUps={() => setGate(true)}
+      />
+    );
+  } else if (route.name === 'voyage') {
+    body = (
+      <DailyVoyage
+        profile={profile}
+        theme={theme}
+        initialTrack={route.initialTrack}
+        onExit={back}
+        onUnlocked={() => {
+          setLastIsland('games');
+          setRoute({ name: 'island', key: 'games' });
+        }}
       />
     );
   } else if (route.name === 'island') {

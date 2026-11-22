@@ -2885,6 +2885,7 @@ table.skills { width: 100%; border-collapse: collapse; font-size: 16px; } table.
 }
 
 .hub-island-tile {
+  position: relative;
   flex: 1;
   min-width: 160px;
   height: 310px;
@@ -2896,6 +2897,39 @@ table.skills { width: 100%; border-collapse: collapse; font-size: 16px; } table.
   cursor: pointer;
   text-align: center;
   color: var(--text, #1c2738);
+}
+
+.tile-lock-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #ffd166;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 209, 102, 0.5);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  z-index: 5;
+  letter-spacing: 0.3px;
+  pointer-events: none;
+}
+
+.tile-unlocked-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #2a9d4a;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  z-index: 5;
+  letter-spacing: 0.3px;
+  pointer-events: none;
 }
 
 .hub-island-tile .tile-category {

@@ -2,16 +2,18 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { frontier } from '../core/engine';
 import { patchProfile } from '../core/db';
 import { APPS } from '../core/registry';
-import { speak, speakThemeGreeting } from '../core/speech';
+import { sfx, speak, speakThemeGreeting } from '../core/speech';
 import { THEMES, themeById } from '../core/themes';
 import type { MiniApp, Profile, Subject, Theme } from '../core/types';
 import { isVoiceSupported, toggleVoiceListening, useVoice } from '../core/voice';
 import { focusFirst, useBackHandler } from '../core/nav';
+import { getTodayRoutine, isVoyageUnlocked, unlockVoyageToday, type DayRoutine } from '../core/voyage';
 import { AgeOnboardingModal } from '../ui/AgeOnboarding';
 import { HelperAvatar, IslandBase, MapTrail } from '../ui/Art';
 import { HubOptionsModal } from '../ui/HubOptionsModal';
 import { ThemePickerModal } from '../ui/ThemePicker';
 import { WelcomeTourModal } from '../ui/WelcomeTour';
+import Gate from './parent/Gate';
 
 const TONE: Record<string, Record<string, string>> = {
   pirate: { reading: '#f6d98a', math: '#ffb3a7', mystery: '#c3aef0', brain: '#9fe3b8', games: '#ffc27a' },
@@ -63,16 +65,41 @@ function helperGreeting(theme: Theme, name: string): string {
 }
 
 /** The map: one island per subject, plus the big "Start mission" button. */
-export default function Hub({ profile, theme, lastIsland, onIsland, onMission, onSwitch, onGrownUps }: {
+export default function Hub({
+  profile, theme, lastIsland, onIsland, onMission, onVoyage, onSwitch, onGrownUps,
+}: {
   profile: Profile; theme: Theme;
   lastIsland?: IslandKey;
-  onIsland: (k: IslandKey) => void; onMission: () => void; onSwitch: () => void; onGrownUps: () => void;
+  onIsland: (k: IslandKey) => void;
+  onMission: () => void;
+  onVoyage: (track?: 'reading' | 'math') => void;
+  onSwitch: () => void;
+  onGrownUps: () => void;
 }) {
   const [book, setBook] = useState(false);
   const [ageModal, setAgeModal] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [lockedModal, setLockedModal] = useState(false);
+  const [showAdultGate, setShowAdultGate] = useState(false);
+  const routine = useMemo(() => getTodayRoutine(), []);
+  const [unlocked, setUnlocked] = useState(() => isVoyageUnlocked(profile.id));
   const dwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const onUnlockEvent = () => setUnlocked(true);
+    window.addEventListener('voyage:unlocked', onUnlockEvent);
+    return () => window.removeEventListener('voyage:unlocked', onUnlockEvent);
+  }, []);
+
+  const handleIslandClick = (key: IslandKey) => {
+    if (key === 'games' && !unlocked) {
+      setLockedModal(true);
+      void speak(`Games Island is locked! Complete 5 out of 5 in today's ${routine.dayName} Voyage to unlock!`);
+      return;
+    }
+    onIsland(key);
+  };
 
   const onDwell = (text: string) => {
     if (dwellTimer.current) clearTimeout(dwellTimer.current);
@@ -177,58 +204,148 @@ export default function Hub({ profile, theme, lastIsland, onIsland, onMission, o
       </header>
       {/* Straight-line Two-Tier Layout (Page 5 design spec) */}
       <div className="hub-grid-layout">
-        {/* Row 1: Today's Mission Card - Focused by default */}
-        <button
-          className="hub-mission-card"
-          data-autofocus={!lastIsland ? '' : undefined}
-          onClick={onMission}
-          onFocus={() => onDwell(`Today's Mission: ${theme.mapTitle.replaceAll('{name}', profile.name || 'Rowan')}`)}
-          onBlur={onLeave}
-          aria-label={`Start a mission - Today's Mission: ${theme.mapTitle.replaceAll('{name}', profile.name || 'Rowan')}`}
-        >
-          <div className="mission-art-box">
-            <span className="mission-badge-emoji">{theme.pieces[0]}</span>
-            <span className="mission-map-icon">🗺️</span>
-          </div>
-          <div className="mission-details">
-            <span className="mission-tag">Today's Mission</span>
-            <h2 className="mission-title">{theme.mapTitle.replaceAll('{name}', profile.name || 'Rowan')}</h2>
-            <div className="mission-dots" aria-label="Activities in this mission">
-              <span className="m-dot done"></span>
-              <span className="m-dot done"></span>
-              <span className="m-dot"></span>
-              <span className="m-dot"></span>
+        {/* Row 1: Today's Daily Voyage Hero Card & Adventure Mission Card */}
+        <div className="hub-hero-row" style={{ width: '100%', maxWidth: '1400px', display: 'flex', gap: '20px', alignItems: 'stretch' }}>
+          <button
+            className="hub-mission-card"
+            data-autofocus={!lastIsland ? '' : undefined}
+            onClick={() => onVoyage()}
+            onFocus={() => onDwell(`Today's Voyage: ${routine.dayName}, ${routine.title}`)}
+            onBlur={onLeave}
+            aria-label={`Today's Voyage: ${routine.dayName}, ${routine.title}`}
+            style={{ flex: '3 1 0', minWidth: '0' }}
+          >
+            <div className="mission-art-box">
+              <span className="mission-badge-emoji">{routine.reading.icon}</span>
+              <span className="mission-map-icon">⛵</span>
             </div>
-          </div>
-          <div className="mission-play-prompt">
-            <span className="play-triangle">▶</span>
-            <b>Start a mission</b>
-          </div>
-        </button>
+            <div className="mission-details">
+              <div className="row align-center gap-8" style={{ marginBottom: '4px', justifyContent: 'flex-start' }}>
+                <span className="mission-tag">⛵ {routine.dayName}'s Daily Voyage</span>
+                {unlocked ? (
+                  <span className="chip" style={{ background: '#d4edda', color: '#155724', fontSize: '13px', padding: '2px 8px', height: 'auto', minHeight: 'unset' }}>
+                    🎉 Games Unlocked
+                  </span>
+                ) : (
+                  <span className="chip" style={{ background: '#fff3cd', color: '#856404', fontSize: '13px', padding: '2px 8px', height: 'auto', minHeight: 'unset' }}>
+                    🔒 5/5 Needed for Games
+                  </span>
+                )}
+              </div>
+              <h2 className="mission-title">{routine.title}</h2>
+              <p style={{ margin: '4px 0 0', fontSize: '16px', opacity: 0.88 }}>
+                {routine.tagline} (Choose 📖 <b>{routine.reading.title}</b> or 🔢 <b>{routine.math.title}</b>)
+              </p>
+            </div>
+            <div className="mission-play-prompt">
+              <span className="play-triangle">▶</span>
+              <b>{unlocked ? 'Play Again' : 'Start Voyage'}</b>
+            </div>
+          </button>
+
+          <button
+            className="hub-mission-card mission-secondary-card"
+            onClick={onMission}
+            onFocus={() => onDwell("Start a mission - 5 activities and a treasure chest")}
+            onBlur={onLeave}
+            aria-label="Start a mission - 5 quick jobs to earn stickers"
+            style={{ flex: '1 1 280px', maxWidth: '340px', padding: '20px' }}
+          >
+            <div className="mission-art-box" style={{ width: '80px', height: '80px' }}>
+              <span className="mission-badge-emoji" style={{ fontSize: '38px' }}>🗺️</span>
+            </div>
+            <div className="mission-details" style={{ textAlign: 'left' }}>
+              <span className="mission-tag" style={{ fontSize: '12px' }}>★ MISSION</span>
+              <h3 style={{ margin: '4px 0 2px', fontSize: '18px', fontWeight: 700 }}>
+                {theme.mapTitle.replaceAll('{name}', profile.name || 'Rowan')}
+              </h3>
+              <div className="mission-play-prompt" style={{ padding: '0', background: 'none' }}>
+                <b style={{ fontSize: '15px', color: 'var(--primary)' }}>Start a mission ▶</b>
+              </div>
+            </div>
+          </button>
+        </div>
 
         {/* Row 2: The Islands in One Straight Row */}
         <div className="hub-islands-row" role="region" aria-label="Islands">
-          {shown.map((i) => (
-            <button
-              key={i.key}
-              id={`island-btn-${i.key}`}
-              data-autofocus={lastIsland === i.key ? '' : undefined}
-              className={`hub-island-tile ${i.key}`}
-              onClick={() => onIsland(i.key)}
-              onFocus={() => onDwell(`${i.name} Island`)}
-              onBlur={onLeave}
-              aria-label={`${i.name} Island`}
-            >
-              <span className="tile-category">{i.key.toUpperCase()}</span>
-              <div className="tile-art-wrap">
-                <IslandBase themeId={theme.id} tone={TONE[theme.id]?.[i.key] ?? '#f6d98a'} />
-                <span className="tile-emoji">{i.emoji}</span>
-              </div>
-              <span className="tile-title">{i.name}</span>
-            </button>
-          ))}
+          {shown.map((i) => {
+            const isLocked = i.key === 'games' && !unlocked;
+            return (
+              <button
+                key={i.key}
+                id={`island-btn-${i.key}`}
+                data-autofocus={lastIsland === i.key ? '' : undefined}
+                className={`hub-island-tile ${i.key}`}
+                onClick={() => handleIslandClick(i.key)}
+                onFocus={() => onDwell(`${i.name} Island${isLocked ? ' - Locked until 5/5 Voyage complete' : ''}`)}
+                onBlur={onLeave}
+                aria-label={`${i.name} Island${isLocked ? ', Locked' : ''}`}
+              >
+                {isLocked && <span className="tile-lock-badge">🔒 5/5 to unlock</span>}
+                {i.key === 'games' && unlocked && <span className="tile-unlocked-badge">⭐ Open!</span>}
+                <span className="tile-category">{i.key.toUpperCase()}</span>
+                <div className="tile-art-wrap">
+                  <IslandBase themeId={theme.id} tone={TONE[theme.id]?.[i.key] ?? '#f6d98a'} />
+                  <span className="tile-emoji">{i.emoji}</span>
+                </div>
+                <span className="tile-title">{i.name}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
+      {lockedModal && (
+        <div className="overlay" onClick={() => setLockedModal(false)}>
+          <div className="card text-center" style={{ maxWidth: '620px', padding: '28px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: '64px', marginBottom: '8px' }}>🔒🎮</div>
+            <h2 style={{ fontSize: '28px', margin: '0 0 8px' }}>Games Island is Locked!</h2>
+            <p style={{ fontSize: '18px', opacity: 0.9, margin: '0 0 16px' }}>
+              Complete today's <b>{routine.dayName} Voyage</b> with <b>5 out of 5</b> in Reading OR Math to unlock all games!
+            </p>
+
+            <div className="row justify-center gap-12" style={{ flexWrap: 'wrap', margin: '16px 0' }}>
+              <button
+                className="btn primary big"
+                data-autofocus
+                onClick={() => { setLockedModal(false); onVoyage('reading'); }}
+                style={{ flex: '1 1 240px' }}
+              >
+                {routine.reading.icon} Do Reading: {routine.reading.title} (5/5)
+              </button>
+              <button
+                className="btn primary big"
+                onClick={() => { setLockedModal(false); onVoyage('math'); }}
+                style={{ flex: '1 1 240px' }}
+              >
+                {routine.math.icon} Do Math: {routine.math.title} (5/5)
+              </button>
+            </div>
+
+            <div className="row justify-between align-center" style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '16px' }}>
+              <button className="btn" style={{ fontSize: '14px', opacity: 0.8 }} onClick={() => setShowAdultGate(true)}>
+                🔓 Grown-up Override
+              </button>
+              <button className="btn" onClick={() => setLockedModal(false)}>
+                Back to Map
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showAdultGate && (
+        <Gate
+          onCancel={() => setShowAdultGate(false)}
+          onPass={() => {
+            unlockVoyageToday(profile.id);
+            setUnlocked(true);
+            setShowAdultGate(false);
+            setLockedModal(false);
+            sfx.star();
+            void speak('Games Island has been unlocked by a grown-up!');
+            onIsland('games');
+          }}
+        />
+      )}
       {book && <StickerBook profile={profile} theme={theme} onClose={() => setBook(false)} />}
       {ageModal && <AgeOnboardingModal profile={profile} onClose={() => setAgeModal(false)} />}
       {showOptions && (
