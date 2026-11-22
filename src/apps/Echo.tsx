@@ -23,9 +23,19 @@ function Game({ level, theme, childName, onWin, onNext, onExit }: { level: numbe
   const alive = useRef(true);
   const pos = useRef(0);
   const cur = useRef<number[]>([]);
+  const padRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const focusFirstPad = () => {
+    setTimeout(() => {
+      if (alive.current && padRefs.current[0]) {
+        padRefs.current[0].focus();
+      }
+    }, 40);
+  };
 
   const show = async (s: number[]) => {
     setPhase('watch'); pos.current = 0;
+    focusFirstPad();
     await sleep(500);
     for (const p of s) {
       if (!alive.current) return;
@@ -37,6 +47,7 @@ function Game({ level, theme, childName, onWin, onNext, onExit }: { level: numbe
     if (!alive.current) return;
     setPhase('play');
     setBubble('Your turn!');
+    focusFirstPad();
   };
 
   useEffect(() => {
@@ -64,6 +75,7 @@ function Game({ level, theme, childName, onWin, onNext, onExit }: { level: numbe
         }
         setPhase('watch');
         setBubble(`Great! ${s.length} in a row. One more!`);
+        focusFirstPad();
         const next = [...s, Math.floor(Math.random() * pads)];
         cur.current = next; setSeq(next);
         await sleep(700);
@@ -74,6 +86,7 @@ function Game({ level, theme, childName, onWin, onNext, onExit }: { level: numbe
       sfx.soft();
       setPhase('watch');
       setBubble('Oops! Watch it again.');
+      focusFirstPad();
       await sleep(700);
       void show(s);
     }
@@ -84,7 +97,16 @@ function Game({ level, theme, childName, onWin, onNext, onExit }: { level: numbe
       <Bubble theme={theme} text={bubble} />
       <div className={`echo-pads p${pads}`}>
         {Array.from({ length: pads }, (_, i) => (
-          <button key={i} className={`echo-pad${lit === i ? ' lit' : ''}`} style={{ ['--pad' as string]: GEMS[i].color }} onClick={() => void press(i)} disabled={phase !== 'play'} aria-label={`pad ${GEMS[i].name}`}>
+          <button
+            key={i}
+            ref={(el) => { padRefs.current[i] = el; }}
+            data-autofocus={i === 0 ? '' : undefined}
+            className={`echo-pad${lit === i ? ' lit' : ''}`}
+            style={{ ['--pad' as string]: GEMS[i].color }}
+            onClick={() => void press(i)}
+            aria-disabled={phase !== 'play'}
+            aria-label={`pad ${GEMS[i].name}`}
+          >
             <span>{GEMS[i].glyph}</span>
           </button>
         ))}
