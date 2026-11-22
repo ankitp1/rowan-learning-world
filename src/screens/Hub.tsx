@@ -249,9 +249,11 @@ export default function Hub({
                 )}
               </div>
               <h2 className="mission-title">{routine.title}</h2>
-              <p style={{ margin: '4px 0 0', fontSize: '16px', opacity: 0.88 }}>
-                {routine.tagline} (Choose 📖 <b>{routine.reading.title}</b> or 🔢 <b>{routine.math.title}</b>)
-              </p>
+              {!routine.isFreeChoice && routine.tagline ? (
+                <p style={{ margin: '4px 0 0', fontSize: '16px', opacity: 0.88 }}>
+                  {routine.tagline} (Choose 📖 <b>{routine.reading.title}</b> or 🔢 <b>{routine.math.title}</b>)
+                </p>
+              ) : null}
             </div>
             <div className="mission-play-prompt">
               <span className="play-triangle">▶</span>

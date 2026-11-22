@@ -196,19 +196,19 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
     <div className={`screen mission intro theme-${theme.id}`}>
       <header className="topbar" style={{ width: '100%', maxWidth: '980px', margin: '0 auto 12px' }}>
         <button className="back" onClick={onExit} aria-label="Back to Map">⬅</button>
-        <h2 style={{ fontSize: '24px' }}>⛵ Daily Voyage: {routine.title}</h2>
+        <h2 style={{ fontSize: '24px' }}>⛵ {routine.title}</h2>
         <span className="chip" style={{ fontSize: '16px' }}>⭐ {profile.stars}</span>
       </header>
 
       <div style={{ textAlign: 'center', maxWidth: '820px', margin: '0 auto 16px' }}>
         <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>
-          {routine.dayName} Daily Voyage
+          {routine.title}
         </h1>
-        <p style={{ fontSize: '20px', opacity: 0.9 }}>
-          {routine.isFreeChoice
-            ? 'Weekend freedom! Choose ANY game you want to play for your 5 questions!'
-            : 'Choose Reading OR Math to complete today\'s Voyage and unlock Games Island!'}
-        </p>
+        {!routine.isFreeChoice && (
+          <p style={{ fontSize: '20px', opacity: 0.9 }}>
+            Choose Reading OR Math to complete today's Voyage and unlock Games Island!
+          </p>
+        )}
         {nudge && (
           <div
             className="chip"
@@ -237,7 +237,7 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
       {routine.isFreeChoice ? (
         <div style={{ maxWidth: '960px', width: '100%', margin: '0 auto 24px' }}>
           <div className="row justify-between align-center" style={{ marginBottom: '14px', padding: '0 8px' }}>
-            <span style={{ fontSize: '18px', fontWeight: 700 }}>Pick Any Adventure:</span>
+            <span style={{ fontSize: '20px', fontWeight: 700 }}>Choose any game:</span>
             <button
               className="btn primary"
               style={{ padding: '6px 18px', fontSize: '15px', minHeight: '40px' }}
@@ -252,7 +252,7 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
               gap: '14px',
-              maxHeight: '440px',
+              maxHeight: '460px',
               overflowY: 'auto',
               padding: '6px',
             }}
@@ -271,12 +271,12 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '6px',
+                  gap: '8px',
                 }}
                 onClick={() => startCustomApp(app.appId, app.track)}
               >
                 <div className="row align-center justify-between">
-                  <span style={{ fontSize: '36px' }}>{app.icon}</span>
+                  <span style={{ fontSize: '38px' }}>{app.icon}</span>
                   <span
                     className="chip"
                     style={{
@@ -292,7 +292,6 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
                   </span>
                 </div>
                 <h4 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: 700 }}>{app.title}</h4>
-                <small style={{ fontSize: '13px', opacity: 0.85 }}>{app.blurb}</small>
               </button>
             ))}
           </div>
