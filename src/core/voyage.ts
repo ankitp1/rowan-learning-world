@@ -5,16 +5,41 @@ export interface DayRoutine {
   dayName: string;
   title: string;
   tagline: string;
+  isFreeChoice?: boolean;
   reading: { appId: string; title: string; icon: string; blurb: string };
   math: { appId: string; title: string; icon: string; blurb: string };
 }
+
+export interface VoyageAppChoice {
+  appId: string;
+  title: string;
+  icon: string;
+  track: 'reading' | 'math';
+  blurb: string;
+}
+
+export const ALL_VOYAGE_APPS: VoyageAppChoice[] = [
+  // Reading Apps
+  { appId: 'word-builder', title: 'Word Builder', icon: '🔤', track: 'reading', blurb: 'Spell words with letter tiles' },
+  { appId: 'blend-plank', title: 'Blend the Plank', icon: '🪵', track: 'reading', blurb: 'Sound out & read wooden planks' },
+  { appId: 'sight-cannon', title: 'Sight-Word Cannon', icon: '💥', track: 'reading', blurb: 'Target & blast sight words' },
+  { appId: 'rhyme-ropes', title: 'Rhyme Ropes', icon: '🪢', track: 'reading', blurb: 'Swing to matching rhymes' },
+  { appId: 'group-names', title: 'Group Names', icon: '🐾', track: 'reading', blurb: 'Match animal packs & vocabulary' },
+  { appId: 'captains-log', title: "Captain's Log", icon: '📜', track: 'reading', blurb: 'Follow explorer directions' },
+  // Math Apps
+  { appId: 'number-bridge', title: 'Number Bonds Bridge', icon: '🌉', track: 'math', blurb: 'Fix bridges to make 10 or 20' },
+  { appId: 'coin-count', title: 'Coin Count', icon: '🪙', track: 'math', blurb: 'Count & compare coin piles' },
+  { appId: 'treasure-add', title: 'Treasure Add', icon: '🧰', track: 'math', blurb: 'Add gems into the treasure chest' },
+  { appId: 'sneaky-thief', title: 'Sneaky Thief', icon: '🐦', track: 'math', blurb: 'Find how many gems remain' },
+];
 
 export const WEEKLY_ROUTINES: DayRoutine[] = [
   {
     dayIndex: 0,
     dayName: 'Sunday',
-    title: 'Sunday Celebration Voyage',
-    tagline: 'Build words & add treasure to wrap up the week!',
+    title: 'Free Choice Sunday',
+    tagline: 'Weekend freedom! Choose ANY activity you want to play!',
+    isFreeChoice: true,
     reading: { appId: 'word-builder', title: 'Word Builder', icon: '🔤', blurb: 'Spell 5 words with letter tiles' },
     math: { appId: 'treasure-add', title: 'Treasure Add', icon: '🧰', blurb: 'Add gems into the chest 5 times' },
   },
@@ -53,16 +78,18 @@ export const WEEKLY_ROUTINES: DayRoutine[] = [
   {
     dayIndex: 5,
     dayName: 'Friday',
-    title: 'Free Explorer Friday',
-    tagline: 'Discover animal pack names & count shiny coins!',
+    title: 'Free Choice Friday',
+    tagline: 'Weekend freedom! Choose ANY activity you want to play!',
+    isFreeChoice: true,
     reading: { appId: 'group-names', title: 'Group Names', icon: '🐾', blurb: 'Match 5 animal groups and packs' },
     math: { appId: 'coin-count', title: 'Coin Comparison', icon: '🪙', blurb: 'Compare 5 coin piles' },
   },
   {
     dayIndex: 6,
     dayName: 'Saturday',
-    title: 'Adventure Saturday',
-    tagline: 'Weekend challenge: master planks & build bridges!',
+    title: 'Free Choice Saturday',
+    tagline: 'Weekend freedom! Choose ANY activity you want to play!',
+    isFreeChoice: true,
     reading: { appId: 'blend-plank', title: 'Blend the Plank', icon: '🪵', blurb: 'Sound out & read 5 planks' },
     math: { appId: 'number-bridge', title: 'Number Bonds Bridge', icon: '🌉', blurb: 'Fix 5 bridges to make 10 or 20' },
   },

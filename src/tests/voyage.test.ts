@@ -2,6 +2,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import {
   WEEKLY_ROUTINES,
+  ALL_VOYAGE_APPS,
   getTodayRoutine,
   isVoyageUnlocked,
   unlockVoyageToday,
@@ -29,51 +30,56 @@ describe('Daily Voyage and Weekly Routine System', () => {
     }
   });
 
-  it('defines consistent routines for all 7 days of the week', () => {
+  it('defines consistent routines for weekdays and unstructured free-choice for Fri, Sat, Sun', () => {
     expect(WEEKLY_ROUTINES).toHaveLength(7);
+    expect(ALL_VOYAGE_APPS).toHaveLength(10);
 
-    // Sunday (0)
+    // Sunday (0) - Free Choice Weekend
     const sun = getTodayRoutine(0);
     expect(sun.dayName).toBe('Sunday');
-    expect(sun.reading.appId).toBe('word-builder');
-    expect(sun.math.appId).toBe('treasure-add');
+    expect(sun.isFreeChoice).toBe(true);
 
-    // Monday (1)
+    // Monday (1) - Structured
     const mon = getTodayRoutine(1);
     expect(mon.dayName).toBe('Monday');
     expect(mon.title).toBe('Word & Coin Monday');
+    expect(mon.isFreeChoice).toBeFalsy();
     expect(mon.reading.appId).toBe('word-builder');
     expect(mon.math.appId).toBe('coin-count');
 
-    // Tuesday (2)
+    // Tuesday (2) - Structured
     const tue = getTodayRoutine(2);
     expect(tue.dayName).toBe('Tuesday');
+    expect(tue.title).toBe('Rhyme & Bridge Tuesday');
+    expect(tue.isFreeChoice).toBeFalsy();
     expect(tue.reading.appId).toBe('rhyme-ropes');
     expect(tue.math.appId).toBe('number-bridge');
 
-    // Wednesday (3)
+    // Wednesday (3) - Structured
     const wed = getTodayRoutine(3);
     expect(wed.dayName).toBe('Wednesday');
+    expect(wed.title).toBe('Plank & Treasure Wednesday');
+    expect(wed.isFreeChoice).toBeFalsy();
     expect(wed.reading.appId).toBe('blend-plank');
     expect(wed.math.appId).toBe('treasure-add');
 
-    // Thursday (4)
+    // Thursday (4) - Structured
     const thu = getTodayRoutine(4);
     expect(thu.dayName).toBe('Thursday');
+    expect(thu.title).toBe('Sight & Subtract Thursday');
+    expect(thu.isFreeChoice).toBeFalsy();
     expect(thu.reading.appId).toBe('sight-cannon');
     expect(thu.math.appId).toBe('sneaky-thief');
 
-    // Friday (5) - Free Explorer Friday with Group Names
+    // Friday (5) - Free Choice Weekend
     const fri = getTodayRoutine(5);
     expect(fri.dayName).toBe('Friday');
-    expect(fri.reading.appId).toBe('group-names');
-    expect(fri.math.appId).toBe('coin-count');
+    expect(fri.isFreeChoice).toBe(true);
 
-    // Saturday (6)
+    // Saturday (6) - Free Choice Weekend
     const sat = getTodayRoutine(6);
     expect(sat.dayName).toBe('Saturday');
-    expect(sat.reading.appId).toBe('blend-plank');
-    expect(sat.math.appId).toBe('number-bridge');
+    expect(sat.isFreeChoice).toBe(true);
   });
 
   it('defaults to locked state before voyage completion', () => {
@@ -125,7 +131,7 @@ describe('Daily Voyage and Weekly Routine System', () => {
   });
 
   it('provides rich real-world quests with completion tracking', () => {
-    expect(REAL_WORLD_QUESTS.length).toBeGreaterThanOrEqual(10);
+    expect(REAL_WORLD_QUESTS.length).toBeGreaterThanOrEqual(70);
     const q = getTodayQuest();
     expect(q.prompt).toBeTruthy();
     expect(q.examples).toBeTruthy();

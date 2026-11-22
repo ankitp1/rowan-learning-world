@@ -4,6 +4,7 @@ import { appById } from '../core/registry';
 import { sfx, speak, speakThemePraise, stopSpeaking } from '../core/speech';
 import type { MiniAppProps, Profile, RoundResult, Theme } from '../core/types';
 import {
+  ALL_VOYAGE_APPS,
   getTodayRoutine,
   getTrackNudge,
   isVoyageUnlocked,
@@ -25,22 +26,45 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
   const routine = useMemo(() => getTodayRoutine(), []);
   const nudge = useMemo(() => getTrackNudge(profile.id), [profile.id]);
   const [track, setTrack] = useState<'reading' | 'math' | null>(initialTrack ?? null);
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(() => {
+    if (initialTrack === 'reading') return routine.reading.appId;
+    if (initialTrack === 'math') return routine.math.appId;
+    return null;
+  });
   const [result, setResult] = useState<RoundResult | null>(null);
   const [attemptCount, setAttemptCount] = useState(1);
   const [showGate, setShowGate] = useState(false);
   const [runKey, setRunKey] = useState(0);
   const alreadyUnlocked = isVoyageUnlocked(profile.id);
 
-  const activeAppId = track === 'reading' ? routine.reading.appId : track === 'math' ? routine.math.appId : null;
-  const activeApp = activeAppId ? appById(activeAppId) : null;
+  const activeApp = selectedAppId ? appById(selectedAppId) : null;
 
   const startTrack = (chosenTrack: 'reading' | 'math') => {
     stopSpeaking();
     recordVoyageTrackPick(profile.id, chosenTrack);
     setResult(null);
     setTrack(chosenTrack);
+    const appId = chosenTrack === 'reading' ? routine.reading.appId : routine.math.appId;
+    setSelectedAppId(appId);
     const chosen = chosenTrack === 'reading' ? routine.reading : routine.math;
     void speak(`Starting ${chosen.title}! Let's do 5 questions!`);
+  };
+
+  const startCustomApp = (appId: string, appTrack: 'reading' | 'math') => {
+    stopSpeaking();
+    recordVoyageTrackPick(profile.id, appTrack);
+    setResult(null);
+    setTrack(appTrack);
+    setSelectedAppId(appId);
+    const chosen = appById(appId);
+    if (chosen) {
+      void speak(`Starting ${chosen.title}! Let's do 5 questions!`);
+    }
+  };
+
+  const handleRandomSurprise = () => {
+    const randomChoice = ALL_VOYAGE_APPS[Math.floor(Math.random() * ALL_VOYAGE_APPS.length)];
+    startCustomApp(randomChoice.appId, randomChoice.track);
   };
 
   const handleComplete = (r: RoundResult) => {
@@ -79,13 +103,10 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
   };
 
   // 1. Result screen after finishing the 5 questions
-  if (result && track) {
+  if (result && activeApp) {
     const isPerfection = result.correct === result.total;
     const isRetryPass = attemptCount >= 2;
     const unlockedNow = isPerfection || isRetryPass;
-    const currentTrackInfo = track === 'reading' ? routine.reading : routine.math;
-    const otherTrack = track === 'reading' ? 'math' : 'reading';
-    const otherTrackInfo = otherTrack === 'reading' ? routine.reading : routine.math;
 
     return (
       <div className={`screen mission finale theme-${theme.id}`}>
@@ -102,7 +123,7 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
           </h1>
           <p style={{ fontSize: '20px', margin: '8px 0 16px' }}>
             {isPerfection
-              ? `Amazing work, ${profile.name}! You completed today's ${currentTrackInfo.title} with 5 out of 5 and unlocked Games Island! +5 Bonus Stars! ⭐`
+              ? `Amazing work, ${profile.name}! You completed ${activeApp.title} with 5 out of 5 and unlocked Games Island! +5 Bonus Stars! ⭐`
               : isRetryPass
               ? `Awesome perseverance, ${profile.name}! You kept trying and didn't give up! Games Island is UNLOCKED for today! +2 Perseverance Stars! ⭐`
               : `Great effort, ${profile.name}! You got ${result.correct} of ${result.total}. Try again to earn Perseverance Stars and unlock Games Island!`}
@@ -114,8 +135,8 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
                 <button className="btn primary big" data-autofocus onClick={onUnlocked}>
                   🎮 Go to Games Island
                 </button>
-                <button className="btn" onClick={() => { setAttemptCount(1); startTrack(otherTrack); }}>
-                  {otherTrackInfo.icon} Do {otherTrackInfo.title} Too
+                <button className="btn" onClick={() => { setAttemptCount(1); setResult(null); setSelectedAppId(null); setTrack(null); }}>
+                  ⛵ Play Another Activity
                 </button>
                 <button className="btn" onClick={onExit}>
                   🗺️ Back to Map
@@ -134,8 +155,8 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
                 >
                   🔁 Try Again (+2 Grit Stars! ⭐)
                 </button>
-                <button className="btn" onClick={() => { setAttemptCount(1); startTrack(otherTrack); }}>
-                  {otherTrackInfo.icon} Switch to {otherTrackInfo.title}
+                <button className="btn" onClick={() => { setAttemptCount(1); setResult(null); setSelectedAppId(null); setTrack(null); }}>
+                  Switch Activity
                 </button>
                 <button className="btn" onClick={() => setShowGate(true)}>
                   🔓 Grown-up Override
@@ -153,13 +174,13 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
   }
 
   // 2. Active gameplay of the chosen 5-question app
-  if (track && activeApp) {
+  if (selectedAppId && activeApp) {
     const Comp = activeApp.component;
     const miniAppProps: MiniAppProps = {
       profile,
       theme,
       rounds: 5,
-      onExit: () => { setTrack(null); setResult(null); },
+      onExit: () => { setTrack(null); setSelectedAppId(null); setResult(null); },
       onComplete: handleComplete,
     };
 
@@ -170,21 +191,23 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
     );
   }
 
-  // 3. Selection screen: Pick Reading Track OR Math Track
+  // 3. Selection screen: Free Choice (Fri, Sat, Sun) VS Structured Routine (Mon - Thu)
   return (
     <div className={`screen mission intro theme-${theme.id}`}>
-      <header className="topbar" style={{ width: '100%', maxWidth: '880px', margin: '0 auto 12px' }}>
+      <header className="topbar" style={{ width: '100%', maxWidth: '980px', margin: '0 auto 12px' }}>
         <button className="back" onClick={onExit} aria-label="Back to Map">⬅</button>
         <h2 style={{ fontSize: '24px' }}>⛵ Daily Voyage: {routine.title}</h2>
         <span className="chip" style={{ fontSize: '16px' }}>⭐ {profile.stars}</span>
       </header>
 
-      <div style={{ textAlign: 'center', maxWidth: '780px', margin: '0 auto 16px' }}>
+      <div style={{ textAlign: 'center', maxWidth: '820px', margin: '0 auto 16px' }}>
         <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>
           {routine.dayName} Daily Voyage
         </h1>
         <p style={{ fontSize: '20px', opacity: 0.9 }}>
-          Choose <b>Reading OR Math</b> to complete today's Voyage and unlock Games Island!
+          {routine.isFreeChoice
+            ? 'Weekend freedom! Choose ANY game you want to play for your 5 questions!'
+            : 'Choose Reading OR Math to complete today\'s Voyage and unlock Games Island!'}
         </p>
         {nudge && (
           <div
@@ -210,93 +233,160 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
         )}
       </div>
 
-      <div className="row justify-center gap-20" style={{ maxWidth: '840px', margin: '0 auto 24px', flexWrap: 'wrap' }}>
-        {/* Reading Track Option */}
-        <button
-          className="app-card"
-          data-autofocus={!nudge || nudge.recommendedTrack === 'reading'}
-          style={{
-            flex: '1 1 340px',
-            maxWidth: '380px',
-            padding: '24px',
-            textAlign: 'left',
-            borderRadius: '24px',
-            border: nudge?.recommendedTrack === 'reading' ? '4px solid #f59e0b' : '3px solid #ffc27a',
-            background: 'var(--panel)',
-            cursor: 'pointer',
-          }}
-          onClick={() => startTrack('reading')}
-        >
-          <div className="row align-center gap-12" style={{ marginBottom: '12px' }}>
-            <span style={{ fontSize: '48px' }}>{routine.reading.icon}</span>
-            <div>
-              <div className="row align-center gap-6" style={{ justifyContent: 'flex-start' }}>
-                <span className="chip" style={{ fontSize: '13px', background: '#f6d98a', color: '#523c00' }}>
-                  📖 Reading Track
-                </span>
-                {nudge?.recommendedTrack === 'reading' && (
-                  <span className="chip" style={{ fontSize: '11px', background: '#fef08a', color: '#854d0e', fontWeight: 700 }}>
-                    ⭐ Recommended
-                  </span>
-                )}
-              </div>
-              <h3 style={{ fontSize: '22px', margin: '4px 0 0' }}>{routine.reading.title}</h3>
-            </div>
+      {/* --- WEEKEND FREE CHOICE PICKER (Friday, Saturday, Sunday) --- */}
+      {routine.isFreeChoice ? (
+        <div style={{ maxWidth: '960px', width: '100%', margin: '0 auto 24px' }}>
+          <div className="row justify-between align-center" style={{ marginBottom: '14px', padding: '0 8px' }}>
+            <span style={{ fontSize: '18px', fontWeight: 700 }}>Pick Any Adventure:</span>
+            <button
+              className="btn primary"
+              style={{ padding: '6px 18px', fontSize: '15px', minHeight: '40px' }}
+              onClick={handleRandomSurprise}
+            >
+              🎲 Surprise Pick!
+            </button>
           </div>
-          <p style={{ fontSize: '16px', opacity: 0.85, margin: '0 0 16px' }}>
-            {routine.reading.blurb}
-          </p>
-          <div className="row justify-between align-center">
-            <span style={{ fontWeight: 600, fontSize: '15px' }}>🎯 5 questions</span>
-            <span className="btn primary" style={{ padding: '8px 18px', fontSize: '16px' }}>
-              Start ▶
-            </span>
-          </div>
-        </button>
 
-        {/* Math Track Option */}
-        <button
-          className="app-card"
-          data-autofocus={nudge?.recommendedTrack === 'math'}
-          style={{
-            flex: '1 1 340px',
-            maxWidth: '380px',
-            padding: '24px',
-            textAlign: 'left',
-            borderRadius: '24px',
-            border: nudge?.recommendedTrack === 'math' ? '4px solid #10b981' : '3px solid #9fe3b8',
-            background: 'var(--panel)',
-            cursor: 'pointer',
-          }}
-          onClick={() => startTrack('math')}
-        >
-          <div className="row align-center gap-12" style={{ marginBottom: '12px' }}>
-            <span style={{ fontSize: '48px' }}>{routine.math.icon}</span>
-            <div>
-              <div className="row align-center gap-6" style={{ justifyContent: 'flex-start' }}>
-                <span className="chip" style={{ fontSize: '13px', background: '#9fe3b8', color: '#0f4d2a' }}>
-                  🔢 Math Track
-                </span>
-                {nudge?.recommendedTrack === 'math' && (
-                  <span className="chip" style={{ fontSize: '11px', background: '#a7f3d0', color: '#065f46', fontWeight: 700 }}>
-                    ⭐ Recommended
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '14px',
+              maxHeight: '440px',
+              overflowY: 'auto',
+              padding: '6px',
+            }}
+          >
+            {ALL_VOYAGE_APPS.map((app, idx) => (
+              <button
+                key={app.appId}
+                className="app-card"
+                data-autofocus={idx === 0 ? '' : undefined}
+                style={{
+                  padding: '16px',
+                  textAlign: 'left',
+                  borderRadius: '20px',
+                  border: app.track === 'reading' ? '3px solid #f6d98a' : '3px solid #9fe3b8',
+                  background: 'var(--panel)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}
+                onClick={() => startCustomApp(app.appId, app.track)}
+              >
+                <div className="row align-center justify-between">
+                  <span style={{ fontSize: '36px' }}>{app.icon}</span>
+                  <span
+                    className="chip"
+                    style={{
+                      fontSize: '11px',
+                      background: app.track === 'reading' ? '#fef3c7' : '#d1fae5',
+                      color: app.track === 'reading' ? '#92400e' : '#065f46',
+                      padding: '2px 8px',
+                      height: 'auto',
+                      minHeight: 'unset',
+                    }}
+                  >
+                    {app.track === 'reading' ? '📖 Reading' : '🔢 Math'}
                   </span>
-                )}
+                </div>
+                <h4 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: 700 }}>{app.title}</h4>
+                <small style={{ fontSize: '13px', opacity: 0.85 }}>{app.blurb}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        /* --- STRUCTURED HABIT ROUTINE (Monday - Thursday) --- */
+        <div className="row justify-center gap-20" style={{ maxWidth: '840px', margin: '0 auto 24px', flexWrap: 'wrap' }}>
+          {/* Reading Track Option */}
+          <button
+            className="app-card"
+            data-autofocus={!nudge || nudge.recommendedTrack === 'reading'}
+            style={{
+              flex: '1 1 340px',
+              maxWidth: '380px',
+              padding: '24px',
+              textAlign: 'left',
+              borderRadius: '24px',
+              border: nudge?.recommendedTrack === 'reading' ? '4px solid #f59e0b' : '3px solid #ffc27a',
+              background: 'var(--panel)',
+              cursor: 'pointer',
+            }}
+            onClick={() => startTrack('reading')}
+          >
+            <div className="row align-center gap-12" style={{ marginBottom: '12px' }}>
+              <span style={{ fontSize: '48px' }}>{routine.reading.icon}</span>
+              <div>
+                <div className="row align-center gap-6" style={{ justifyContent: 'flex-start' }}>
+                  <span className="chip" style={{ fontSize: '13px', background: '#f6d98a', color: '#523c00' }}>
+                    📖 Reading Track
+                  </span>
+                  {nudge?.recommendedTrack === 'reading' && (
+                    <span className="chip" style={{ fontSize: '11px', background: '#fef08a', color: '#854d0e', fontWeight: 700 }}>
+                      ⭐ Recommended
+                    </span>
+                  )}
+                </div>
+                <h3 style={{ fontSize: '22px', margin: '4px 0 0' }}>{routine.reading.title}</h3>
               </div>
-              <h3 style={{ fontSize: '22px', margin: '4px 0 0' }}>{routine.math.title}</h3>
             </div>
-          </div>
-          <p style={{ fontSize: '16px', opacity: 0.85, margin: '0 0 16px' }}>
-            {routine.math.blurb}
-          </p>
-          <div className="row justify-between align-center">
-            <span style={{ fontWeight: 600, fontSize: '15px' }}>🎯 5 questions</span>
-            <span className="btn primary" style={{ padding: '8px 18px', fontSize: '16px' }}>
-              Start ▶
-            </span>
-          </div>
-        </button>
-      </div>
+            <p style={{ fontSize: '16px', opacity: 0.85, margin: '0 0 16px' }}>
+              {routine.reading.blurb}
+            </p>
+            <div className="row justify-between align-center">
+              <span style={{ fontWeight: 600, fontSize: '15px' }}>🎯 5 questions</span>
+              <span className="btn primary" style={{ padding: '8px 18px', fontSize: '16px' }}>
+                Start ▶
+              </span>
+            </div>
+          </button>
+
+          {/* Math Track Option */}
+          <button
+            className="app-card"
+            data-autofocus={nudge?.recommendedTrack === 'math'}
+            style={{
+              flex: '1 1 340px',
+              maxWidth: '380px',
+              padding: '24px',
+              textAlign: 'left',
+              borderRadius: '24px',
+              border: nudge?.recommendedTrack === 'math' ? '4px solid #10b981' : '3px solid #9fe3b8',
+              background: 'var(--panel)',
+              cursor: 'pointer',
+            }}
+            onClick={() => startTrack('math')}
+          >
+            <div className="row align-center gap-12" style={{ marginBottom: '12px' }}>
+              <span style={{ fontSize: '48px' }}>{routine.math.icon}</span>
+              <div>
+                <div className="row align-center gap-6" style={{ justifyContent: 'flex-start' }}>
+                  <span className="chip" style={{ fontSize: '13px', background: '#9fe3b8', color: '#0f4d2a' }}>
+                    🔢 Math Track
+                  </span>
+                  {nudge?.recommendedTrack === 'math' && (
+                    <span className="chip" style={{ fontSize: '11px', background: '#a7f3d0', color: '#065f46', fontWeight: 700 }}>
+                      ⭐ Recommended
+                    </span>
+                  )}
+                </div>
+                <h3 style={{ fontSize: '22px', margin: '4px 0 0' }}>{routine.math.title}</h3>
+              </div>
+            </div>
+            <p style={{ fontSize: '16px', opacity: 0.85, margin: '0 0 16px' }}>
+              {routine.math.blurb}
+            </p>
+            <div className="row justify-between align-center">
+              <span style={{ fontWeight: 600, fontSize: '15px' }}>🎯 5 questions</span>
+              <span className="btn primary" style={{ padding: '8px 18px', fontSize: '16px' }}>
+                Start ▶
+              </span>
+            </div>
+          </button>
+        </div>
+      )}
 
       <div className="row justify-center gap-16" style={{ marginTop: 'auto' }}>
         <button className="btn" onClick={() => setShowGate(true)}>
