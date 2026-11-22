@@ -404,39 +404,249 @@ export function subQuestion(skill: string, o: GenOpts = {}): Question {
 
 /* ---------------- rhyming ---------------- */
 
-/** "cat" -> "at", "ship" -> "ip", "snake" -> "ake": everything from the first vowel on. */
-export const rimeOf = (w: string) => { const i = w.search(/[aeiou]/); return i < 0 ? w : w.slice(i); };
+export interface RhymeEntry {
+  w: string;
+  e: string;
+  rime: string;
+  tier: 0 | 1 | 2;
+  onset?: string;
+}
 
-const RHYME_FAMILIES: W[][] = (() => {
-  const by = new Map<string, W[]>();
-  for (const x of ALL_WORDS) { const r = rimeOf(x.w); by.set(r, [...(by.get(r) ?? []).filter((y) => y.e !== x.e), x]); }
-  return [...by.values()].filter((f) => f.length >= 2);
+export const ADVANCED_RHYME_BANK: RhymeEntry[] = [
+  // --- Tier 0: CVC & early phonics ---
+  { w: 'cat', e: '🐱', rime: 'at', tier: 0, onset: 'c' },
+  { w: 'hat', e: '🎩', rime: 'at', tier: 0, onset: 'h' },
+  { w: 'bat', e: '🦇', rime: 'at', tier: 0, onset: 'b' },
+  { w: 'rat', e: '🐀', rime: 'at', tier: 0, onset: 'r' },
+
+  { w: 'dog', e: '🐶', rime: 'og', tier: 0, onset: 'd' },
+  { w: 'log', e: '🪵', rime: 'og', tier: 0, onset: 'l' },
+  { w: 'frog', e: '🐸', rime: 'og', tier: 0, onset: 'fr' },
+
+  { w: 'pig', e: '🐷', rime: 'ig', tier: 0, onset: 'p' },
+  { w: 'dig', e: '⛏️', rime: 'ig', tier: 0, onset: 'd' },
+  { w: 'wig', e: '👱', rime: 'ig', tier: 0, onset: 'w' },
+
+  { w: 'bug', e: '🐛', rime: 'ug', tier: 0, onset: 'b' },
+  { w: 'rug', e: '🧶', rime: 'ug', tier: 0, onset: 'r' },
+  { w: 'mug', e: '☕', rime: 'ug', tier: 0, onset: 'm' },
+
+  { w: 'pan', e: '🍳', rime: 'an', tier: 0, onset: 'p' },
+  { w: 'fan', e: '🪭', rime: 'an', tier: 0, onset: 'f' },
+  { w: 'van', e: '🚐', rime: 'an', tier: 0, onset: 'v' },
+
+  { w: 'net', e: '🥅', rime: 'et', tier: 0, onset: 'n' },
+  { w: 'jet', e: '✈️', rime: 'et', tier: 0, onset: 'j' },
+  { w: 'vet', e: '🧑‍⚕️', rime: 'et', tier: 0, onset: 'v' },
+
+  { w: 'fox', e: '🦊', rime: 'ox', tier: 0, onset: 'f' },
+  { w: 'box', e: '📦', rime: 'ox', tier: 0, onset: 'b' },
+
+  { w: 'pin', e: '📌', rime: 'in', tier: 0, onset: 'p' },
+  { w: 'win', e: '🏆', rime: 'in', tier: 0, onset: 'w' },
+  { w: 'bin', e: '🗑️', rime: 'in', tier: 0, onset: 'b' },
+
+  { w: 'pot', e: '🍲', rime: 'ot', tier: 0, onset: 'p' },
+  { w: 'hot', e: '🔥', rime: 'ot', tier: 0, onset: 'h' },
+
+  // --- Tier 1: Blends, Digraphs, Vowel Teams & Silent-E ---
+  { w: 'train', e: '🚂', rime: 'ain', tier: 1, onset: 'tr' },
+  { w: 'rain', e: '🌧️', rime: 'ain', tier: 1, onset: 'r' },
+  { w: 'chain', e: '⛓️', rime: 'ain', tier: 1, onset: 'ch' },
+  { w: 'brain', e: '🧠', rime: 'ain', tier: 1, onset: 'br' },
+
+  { w: 'clock', e: '⏰', rime: 'ock', tier: 1, onset: 'cl' },
+  { w: 'block', e: '🧱', rime: 'ock', tier: 1, onset: 'bl' },
+  { w: 'sock', e: '🧦', rime: 'ock', tier: 1, onset: 's' },
+  { w: 'rock', e: '🪨', rime: 'ock', tier: 1, onset: 'r' },
+
+  { w: 'truck', e: '🛻', rime: 'uck', tier: 1, onset: 'tr' },
+  { w: 'duck', e: '🦆', rime: 'uck', tier: 1, onset: 'd' },
+
+  { w: 'star', e: '⭐', rime: 'ar', tier: 1, onset: 'st' },
+  { w: 'car', e: '🚗', rime: 'ar', tier: 1, onset: 'c' },
+  { w: 'jar', e: '🫙', rime: 'ar', tier: 1, onset: 'j' },
+  { w: 'guitar', e: '🎸', rime: 'ar', tier: 1, onset: 'g' },
+
+  { w: 'snake', e: '🐍', rime: 'ake', tier: 1, onset: 'sn' },
+  { w: 'cake', e: '🎂', rime: 'ake', tier: 1, onset: 'c' },
+  { w: 'lake', e: '🏞️', rime: 'ake', tier: 1, onset: 'l' },
+
+  { w: 'snail', e: '🐌', rime: 'ail', tier: 1, onset: 'sn' },
+  { w: 'whale', e: '🐳', rime: 'ail', tier: 1, onset: 'wh' },
+  { w: 'sail', e: '⛵', rime: 'ail', tier: 1, onset: 's' },
+
+  { w: 'moon', e: '🌙', rime: 'oon', tier: 1, onset: 'm' },
+  { w: 'spoon', e: '🥄', rime: 'oon', tier: 1, onset: 'sp' },
+  { w: 'balloon', e: '🎈', rime: 'oon', tier: 1, onset: 'b' },
+
+  { w: 'crown', e: '👑', rime: 'own', tier: 1, onset: 'cr' },
+  { w: 'clown', e: '🤡', rime: 'own', tier: 1, onset: 'cl' },
+
+  { w: 'ring', e: '💍', rime: 'ing', tier: 1, onset: 'r' },
+  { w: 'king', e: '👑', rime: 'ing', tier: 1, onset: 'k' },
+  { w: 'wing', e: '🪽', rime: 'ing', tier: 1, onset: 'w' },
+  { w: 'swing', e: '🛝', rime: 'ing', tier: 1, onset: 'sw' },
+
+  { w: 'shark', e: '🦈', rime: 'ark', tier: 1, onset: 'sh' },
+  { w: 'park', e: '🏞️', rime: 'ark', tier: 1, onset: 'p' },
+
+  { w: 'boat', e: '⛵', rime: 'oat', tier: 1, onset: 'b' },
+  { w: 'coat', e: '🧥', rime: 'oat', tier: 1, onset: 'c' },
+  { w: 'goat', e: '🐐', rime: 'oat', tier: 1, onset: 'g' },
+
+  { w: 'nest', e: '🪺', rime: 'est', tier: 1, onset: 'n' },
+  { w: 'vest', e: '🦺', rime: 'est', tier: 1, onset: 'v' },
+  { w: 'chest', e: '🧰', rime: 'est', tier: 1, onset: 'ch' },
+
+  { w: 'bell', e: '🔔', rime: 'ell', tier: 1, onset: 'b' },
+  { w: 'shell', e: '🐚', rime: 'ell', tier: 1, onset: 'sh' },
+
+  { w: 'tree', e: '🌳', rime: 'ee', tier: 1, onset: 'tr' },
+  { w: 'bee', e: '🐝', rime: 'ee', tier: 1, onset: 'b' },
+
+  { w: 'house', e: '🏠', rime: 'ouse', tier: 1, onset: 'h' },
+  { w: 'mouse', e: '🐭', rime: 'ouse', tier: 1, onset: 'm' },
+
+  { w: 'bear', e: '🐻', rime: 'air', tier: 1, onset: 'b' },
+  { w: 'chair', e: '🪑', rime: 'air', tier: 1, onset: 'ch' },
+  { w: 'pear', e: '🍐', rime: 'air', tier: 1, onset: 'p' },
+
+  // --- Tier 2: Multi-Syllable & Complex Phonics Rhymes ---
+  { w: 'dragon', e: '🐲', rime: 'agon', tier: 2, onset: 'dr' },
+  { w: 'wagon', e: '🛒', rime: 'agon', tier: 2, onset: 'w' },
+
+  { w: 'kitten', e: '🐱', rime: 'itten', tier: 2, onset: 'k' },
+  { w: 'mitten', e: '🧤', rime: 'itten', tier: 2, onset: 'm' },
+
+  { w: 'rocket', e: '🚀', rime: 'ocket', tier: 2, onset: 'r' },
+  { w: 'pocket', e: '👖', rime: 'ocket', tier: 2, onset: 'p' },
+
+  { w: 'mountain', e: '🏔️', rime: 'untain', tier: 2, onset: 'm' },
+  { w: 'fountain', e: '⛲', rime: 'untain', tier: 2, onset: 'f' },
+
+  { w: 'flower', e: '🌸', rime: 'ower', tier: 2, onset: 'fl' },
+  { w: 'tower', e: '🗼', rime: 'ower', tier: 2, onset: 't' },
+
+  { w: 'river', e: '🌊', rime: 'iver', tier: 2, onset: 'r' },
+  { w: 'shiver', e: '🥶', rime: 'iver', tier: 2, onset: 'sh' },
+
+  { w: 'thunder', e: '⚡', rime: 'under', tier: 2, onset: 'th' },
+  { w: 'wonder', e: '🤔', rime: 'under', tier: 2, onset: 'w' },
+
+  { w: 'spider', e: '🕷️', rime: 'ider', tier: 2, onset: 'sp' },
+  { w: 'glider', e: '🪂', rime: 'ider', tier: 2, onset: 'gl' },
+
+  { w: 'cheetah', e: '🐆', rime: 'eetah', tier: 2, onset: 'ch' },
+  { w: 'meter', e: '📏', rime: 'eetah', tier: 2, onset: 'm' },
+
+  { w: 'candle', e: '🕯️', rime: 'andle', tier: 2, onset: 'c' },
+  { w: 'handle', e: '🚪', rime: 'andle', tier: 2, onset: 'h' },
+];
+
+const BANK_BY_WORD = new Map<string, RhymeEntry>(ADVANCED_RHYME_BANK.map((x) => [x.w, x]));
+
+/** Rime getter with lookup in advanced bank, falling back to vowel-split. */
+export const rimeOf = (w: string): string => {
+  const hit = BANK_BY_WORD.get(w);
+  if (hit) return hit.rime;
+  const i = w.search(/[aeiou]/);
+  return i < 0 ? w : w.slice(i);
+};
+
+const RHYME_FAMILIES_BY_TIER: Record<number, RhymeEntry[][]> = (() => {
+  const byTier: Record<number, Map<string, RhymeEntry[]>> = { 0: new Map(), 1: new Map(), 2: new Map() };
+  for (const x of ADVANCED_RHYME_BANK) {
+    const m = byTier[x.tier];
+    m.set(x.rime, [...(m.get(x.rime) ?? []).filter((y) => y.e !== x.e), x]);
+  }
+  return {
+    0: [...byTier[0].values()].filter((f) => f.length >= 2),
+    1: [...byTier[1].values()].filter((f) => f.length >= 2),
+    2: [...byTier[2].values()].filter((f) => f.length >= 2),
+  };
 })();
 
 export function rhymeQuestion(skill: string, o: GenOpts = {}): Question {
   const rng = o.rng ?? Math.random;
   const d = o.difficulty ?? 1;
-  const fresh = RHYME_FAMILIES.filter((f) => f.some((x) => !o.avoid?.includes(x.w)));
-  const fam = pick(fresh.length ? fresh : RHYME_FAMILIES, rng);
+
+  // Select candidate families based on difficulty tier:
+  // Tier 0: CVC & early phonics
+  // Tier 1: Blends, digraphs, vowel teams, silent-e
+  // Tier 2: Multi-syllable & complex challenge rhymes
+  let famPool: RhymeEntry[][];
+  if (d === 0) {
+    famPool = RHYME_FAMILIES_BY_TIER[0];
+  } else if (d === 1) {
+    famPool = [...RHYME_FAMILIES_BY_TIER[0], ...RHYME_FAMILIES_BY_TIER[1]];
+  } else {
+    famPool = [...RHYME_FAMILIES_BY_TIER[1], ...RHYME_FAMILIES_BY_TIER[2]];
+  }
+
+  const fresh = famPool.filter((f) => f.some((x) => !o.avoid?.includes(x.w)));
+  const fam = pick(fresh.length ? fresh : famPool, rng);
   const [target, match] = shuffle(fam, rng);
-  const rime = rimeOf(target.w);
-  const others = ALL_WORDS.filter((x) => rimeOf(x.w) !== rime && x.e !== target.e && x.e !== match.e);
-  const near = (x: W) => (rimeOf(x.w)[0] === rime[0] ? 2 : 0) + (x.w[0] === target.w[0] ? 2 : 0);
-  const pool = d === 0 ? shuffle(others, rng) : shuffle(others, rng).sort((p, q) => near(q) - near(p)).slice(0, 8);
-  const ds: W[] = [];
-  for (const c of shuffle(pool, rng)) if (ds.length < 2 && !ds.some((x) => x.e === c.e)) ds.push(c);
-  const tag = (x: W) => (rimeOf(x.w)[0] === rime[0] ? ['rhyme:vowel'] : x.w[0] === target.w[0] ? ['rhyme:begin'] : []);
-  const explain = `${target.w} and ${match.w} rhyme. They both end with -${rime}.`;
+  const rime = target.rime;
+
+  // Candidate distractors: words with a strictly different rime and different emoji
+  const candidatePool = ADVANCED_RHYME_BANK.filter(
+    (x) => x.rime !== rime && x.e !== target.e && x.e !== match.e && x.w !== target.w && x.w !== match.w
+  );
+
+  const ds: RhymeEntry[] = [];
+
+  // For intermediate and advanced difficulties, craft phonological trap distractors:
+  if (d >= 1) {
+    // 1. Onset / Alliteration trap: shares initial blend/letter with target (e.g. train -> truck, snake -> snail)
+    const targetOnset = target.onset || target.w.slice(0, 2);
+    const onsetMatches = candidatePool.filter(
+      (x) => (x.onset && x.onset === target.onset) || x.w.startsWith(targetOnset) || x.w[0] === target.w[0]
+    );
+    if (onsetMatches.length > 0) {
+      ds.push(pick(onsetMatches, rng));
+    }
+  }
+
+  // Fill remaining distractor slots (up to 2 distractors total, so 3 choices)
+  const remaining = shuffle(
+    candidatePool.filter((c) => !ds.some((x) => x.w === c.w || x.e === c.e)),
+    rng
+  );
+  for (const c of remaining) {
+    if (ds.length >= 2) break;
+    ds.push(c);
+  }
+
+  const tag = (x: RhymeEntry) => {
+    if (x.onset && target.onset && x.onset === target.onset) return ['rhyme:begin'];
+    if (x.w[0] === target.w[0]) return ['rhyme:begin'];
+    if (x.rime[0] === rime[0]) return ['rhyme:vowel'];
+    return [];
+  };
+
+  const explain = `${target.w} and ${match.w} rhyme! They both end with the -${rime} sound.`;
+
   return {
-    id: qid('rhyme'), skill, kind: 'rhyme',
-    prompt: `Which one rhymes with ${target.w}?`, say: `Which one rhymes with ${target.w}?`,
-    word: target.w, emoji: target.e,
-    choices: shuffle([{ id: match.w, text: match.w, emoji: match.e }, ...ds.map((x) => ({ id: x.w, text: x.w, emoji: x.e, tags: tag(x) }))], rng),
+    id: qid('rhyme'),
+    skill,
+    kind: 'rhyme',
+    prompt: `Which one rhymes with ${target.w}?`,
+    say: `Which one rhymes with ${target.w}?`,
+    word: target.w,
+    emoji: target.e,
+    choices: shuffle(
+      [
+        { id: match.w, text: match.w, emoji: match.e },
+        ...ds.map((x) => ({ id: x.w, text: x.w, emoji: x.e, tags: tag(x) })),
+      ],
+      rng
+    ),
     answer: match.w,
     hints: [
       { text: `Say ${target.w} out loud. Listen to how it ends.`, say: `Say ${target.w} out loud. Listen to how it ends.` },
       { text: 'I will take one away.', effect: 'eliminate' },
-      { text: `${target.w} and ${match.w} sound the same at the end.`, say: `${target.w}, ${match.w}. They sound the same at the end.`, effect: 'reveal' },
+      { text: `${target.w} and ${match.w} sound the same at the end: -${rime}!`, say: `${target.w}, ${match.w}. They sound the same at the end.`, effect: 'reveal' },
     ],
     explain: { text: explain, say: explain },
   };

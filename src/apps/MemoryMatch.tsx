@@ -14,6 +14,8 @@ const MODES: { mode: Mode; icon: string; title: string; blurb: string }[] = [
   { mode: 'space', icon: '🚀', title: 'Space Adventure', blurb: 'Rockets, planets & aliens' },
   { mode: 'ocean', icon: '🌊', title: 'Under the Sea', blurb: 'Dolphins, sharks & sea turtles' },
   { mode: 'vehicles', icon: '🏎️', title: 'Fast Vehicles', blurb: 'Fire engines, trains & rockets' },
+  { mode: 'flags', icon: '🚩', title: 'World Flags', blurb: 'USA, Japan, France, Brazil & more' },
+  { mode: 'rhymes', icon: '🪢', title: 'Rhyme Match', blurb: 'Match words that rhyme: Cat & Hat!' },
   { mode: 'letters', icon: '🔤', title: 'Letters and pictures', blurb: 'Match a letter to what starts with it' },
   { mode: 'numbers', icon: '🔢', title: 'Numbers and dots', blurb: 'Match 5 to five dots' },
 ];
@@ -36,10 +38,30 @@ function Game({ mode, level, theme, onWin, onNext, onChange, onExit }: {
   const [streak, setStreak] = useState(0);
   const [peeking, setPeeking] = useState(false);
   const [peeksLeft, setPeeksLeft] = useState(1);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const busy = useRef(false);
   const alive = useRef(true);
   const won = matched.length === deck.length;
   useEffect(() => { alive.current = true; return () => { alive.current = false; stopSpeaking(); }; }, []);
+
+  // Quick 2.5s Memory Flash at the beginning of level 1+ to challenge recall
+  useEffect(() => {
+    if (level >= 1) {
+      setPeeking(true);
+      setCountdown(3);
+      void speak('Memorize the cards!');
+      const t1 = setTimeout(() => { if (alive.current) setCountdown(2); }, 850);
+      const t2 = setTimeout(() => { if (alive.current) setCountdown(1); }, 1700);
+      const t3 = setTimeout(() => {
+        if (alive.current) {
+          setCountdown(null);
+          setPeeking(false);
+          void speak('Go!');
+        }
+      }, 2500);
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    }
+  }, [deck, level]);
 
   const flip = (c: Card) => {
     if (busy.current || won || peeking || up.includes(c.id) || matched.includes(c.id)) return;
@@ -59,7 +81,9 @@ function Game({ mode, level, theme, onWin, onNext, onChange, onExit }: {
         sfx.star();
         const nextStreak = streak + 1;
         setStreak(nextStreak);
-        if (nextStreak === 2) void speak('Double match! Great memory!', { pitch: 1.05 });
+        if (mode === 'rhymes' && a.word && b.word) {
+          void speak(`Match! ${a.word} and ${b.word} rhyme!`, { pitch: 1.05 });
+        } else if (nextStreak === 2) void speak('Double match! Great memory!', { pitch: 1.05 });
         else if (nextStreak >= 3) void speak(`Combo streak of ${nextStreak}! Unstoppable!`, { pitch: 1.08 });
         else if (a.word) void speak(`Match! ${a.word}!`);
 
@@ -122,7 +146,31 @@ function Game({ mode, level, theme, onWin, onNext, onChange, onExit }: {
         )}
       </div>
 
-      <div className="mgrid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, ['--cols' as string]: cols }}>
+      <div className="mgrid" style={{ position: 'relative', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, ['--cols' as string]: cols }}>
+        {countdown !== null && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10,
+              background: 'rgba(0,0,0,0.85)',
+              color: '#FFD36A',
+              padding: '16px 28px',
+              borderRadius: '24px',
+              border: '3px solid #FFD36A',
+              fontSize: '28px',
+              fontWeight: 800,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+              pointerEvents: 'none',
+              animation: 'pop 0.3s ease',
+              textAlign: 'center',
+            }}
+          >
+            👀 Memorize! {countdown}...
+          </div>
+        )}
         {deck.map((c) => {
           const open = peeking || up.includes(c.id) || matched.includes(c.id);
           return (
@@ -176,6 +224,17 @@ export default function MemoryMatch({ profile, theme, onExit }: MiniAppProps) {
               <span className="a-icon">{m.icon}</span><b>{m.title}</b><small>{m.blurb}</small>
             </button>
           ))}
+        </div>
+        <div style={{ marginTop: '24px', padding: '16px', background: 'rgba(255,255,255,0.08)', borderRadius: '20px', textAlign: 'center' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '18px' }}>🧠 More Memory Games on Brain Island:</h3>
+          <div className="row justify-center gap-12" style={{ flexWrap: 'wrap' }}>
+            <button className="btn" onClick={() => { location.hash = '#play:whats-missing'; }}>
+              🔎 What's Missing? (Tray Memory)
+            </button>
+            <button className="btn" onClick={() => { location.hash = '#play:echo'; }}>
+              🎵 Echo Sequence (Pattern Memory)
+            </button>
+          </div>
         </div>
       </GameShell>
     );

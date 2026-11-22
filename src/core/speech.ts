@@ -311,11 +311,12 @@ export async function speakSound(key: string, interrupt = true) {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Sound out a word: each sound with a gap, then the whole word.
+ * Sound out a word: each sound with a gap, then optionally the whole word.
  * onStep(i) fires as each sound starts (i = -1 when blending the whole word).
+ * readWholeWord: if false, skips speaking the blended word at the end (e.g. for Blend the Plank).
  * Returns a cancel function.
  */
-export function soundOut(sounds: string[], word: string, onStep?: (i: number) => void, gap = 450) {
+export function soundOut(sounds: string[], word: string, onStep?: (i: number) => void, gap = 450, readWholeWord = true) {
   let cancelled = false;
   (async () => {
     stopSpeaking();
@@ -327,7 +328,9 @@ export function soundOut(sounds: string[], word: string, onStep?: (i: number) =>
     }
     if (cancelled) return;
     onStep?.(-1);
-    await speak(word, { rate: 0.7, interrupt: false });
+    if (readWholeWord && word) {
+      await speak(word, { rate: 0.7, interrupt: false });
+    }
     if (!cancelled) onStep?.(-2);
   })();
   return () => { cancelled = true; stopSpeaking(); };

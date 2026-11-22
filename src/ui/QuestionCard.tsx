@@ -149,7 +149,7 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
     profile.name
   );
 
-  const playBlend = () => {
+  const playBlend = (readWholeWord = variant !== 'plank') => {
     if (!q.sounds || !q.word) return;
     cancel.current();
     setJoined(false);
@@ -157,7 +157,7 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
       if (!alive.current) return;
       setSoundIdx(i >= 0 ? i : undefined);
       if (i === -1) setJoined(true);
-    }, variant === 'plank' ? 650 : 450);
+    }, variant === 'plank' ? 650 : 450, readWholeWord);
   };
 
   const runCount = async () => {
@@ -239,7 +239,7 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
     else if (h.effect === 'repeat') void speak(q.word ?? '');
     else if (h.effect === 'reveal') {
       setReveal(true);
-      if (q.kind === 'word') playBlend();
+      if (q.kind === 'word') playBlend(true);
       else if (countSeq(q).length) void runCount();
       else void speak(fill(h.text, theme));
     } else {
@@ -262,8 +262,12 @@ export default function QuestionCard({ q, theme, profile, mode = 'practice', pro
     const praise = theme.praise[praiseIdx] || 'Great job!';
     const explain = level > 0 || !correct;
     const starNote = limitSec > 0 && starsEarned > 1 ? ` ⚡ +${starsEarned} Stars Speed Bonus!` : '';
-    setBubble((explain ? fill(q.explain.text, theme, profile.name) : fill(praise, theme, profile.name)) + starNote);
+    const wordPraise = (variant === 'plank' && q.word && correct) ? `${q.word}! ` : '';
+    setBubble(wordPraise + (explain ? fill(q.explain.text, theme, profile.name) : fill(praise, theme, profile.name)) + starNote);
     cancel.current();
+    if (variant === 'plank' && q.word && correct) {
+      await speak(`${q.word}!`, { interrupt: false });
+    }
     if (explain) {
       await speakThemePraise(theme, praiseIdx, profile.name);
       await speak(fill(q.explain.say ?? q.explain.text, theme, profile.name));

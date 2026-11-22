@@ -101,6 +101,17 @@ describe('memory match', () => {
     for (const c of makeDeck('letters', 9).filter((x) => x.kind === 'emoji')) expect(c.word![0]).toBe(c.pair);
     for (const c of makeDeck('numbers', 12).filter((x) => x.kind === 'dots')) expect(String(c.value)).toBe(c.pair);
   });
+  it('supports world flags and rhyming memory match modes', () => {
+    const flagsDeck = makeDeck('flags', 6);
+    expect(flagsDeck).toHaveLength(12);
+    const rhymesDeck = makeDeck('rhymes', 6);
+    expect(rhymesDeck).toHaveLength(12);
+    // In rhymes mode, partners share the rime prefix
+    const first = rhymesDeck[0];
+    const match = rhymesDeck.find((c) => c.id !== first.id && c.pair === first.pair);
+    expect(match).toBeTruthy();
+    expect(isMatch(first, match!)).toBe(true);
+  });
   it('matches only the true partner', () => {
     const deck = makeDeck('pictures', 3);
     const a = deck[0];
