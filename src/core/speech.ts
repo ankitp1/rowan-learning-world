@@ -179,24 +179,32 @@ export function playCharacterAudio(themeId: string, clipKey: string): Promise<bo
         if (!finished) {
           finished = true;
           if (guard) clearTimeout(guard);
-          if (activeAudio === a) activeAudio = null;
+          if (activeAudio === a) {
+            if (!ok) {
+              try { a.pause(); a.currentTime = 0; } catch { /* ignore */ }
+            }
+            activeAudio = null;
+          }
           resolve(ok);
         }
       };
 
-      // Fast initial safety timeout (3.5s) if network stalls or audio is missing;
-      // if metadata loads, update to exact duration + 400ms buffer
-      guard = setTimeout(() => done(false), 3500);
+      // Generous safety timeout (8.0s) so 4-6s greeting/story clips never get cut off prematurely
+      guard = setTimeout(() => done(false), 8000);
 
-      a.onloadedmetadata = () => {
+      const updateDuration = () => {
         if (!finished && a.duration && !isNaN(a.duration) && isFinite(a.duration)) {
           if (guard) clearTimeout(guard);
           guard = setTimeout(() => done(true), a.duration * 1000 + 400);
         }
       };
 
+      a.onloadedmetadata = updateDuration;
+      a.ondurationchange = updateDuration;
+      a.oncanplay = updateDuration;
       a.onended = () => done(true);
       a.onerror = () => done(false);
+
       const res = a.play();
       if (res && typeof res.catch === 'function') {
         res.catch(() => done(false));
@@ -288,13 +296,34 @@ function playClip(key: string): Promise<boolean> {
     return Promise.resolve(false);
   }
   return new Promise((resolve) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let finished = false;
     try {
       const a = new Audio(`./audio/phonemes/${key}.mp3`);
-      a.onended = () => resolve(true);
-      a.onerror = () => resolve(false);
+      activeAudio = a;
+
+      const finish = (ok: boolean) => {
+        if (!finished) {
+          finished = true;
+          if (timer) clearTimeout(timer);
+          if (activeAudio === a) {
+            if (!ok) {
+              try { a.pause(); a.currentTime = 0; } catch { /* ignore */ }
+            }
+            activeAudio = null;
+          }
+          resolve(ok);
+        }
+      };
+
+      a.onended = () => finish(true);
+      a.onerror = () => finish(false);
+      timer = setTimeout(() => finish(false), 2500);
+
       const res = a.play();
-      if (res && typeof res.catch === 'function') res.catch(() => resolve(false));
-      setTimeout(() => resolve(false), 2000);
+      if (res && typeof res.catch === 'function') {
+        res.catch(() => finish(false));
+      }
     } catch {
       resolve(false);
     }

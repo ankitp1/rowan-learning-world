@@ -53,9 +53,9 @@ export const WEEKLY_ROUTINES: DayRoutine[] = [
   {
     dayIndex: 5,
     dayName: 'Friday',
-    title: 'Directions & Compare Friday',
-    tagline: 'Read explorer log directions & compare piles!',
-    reading: { appId: 'captains-log', title: "Captain's Log", icon: '📜', blurb: 'Read & follow 5 explorer directions' },
+    title: 'Free Explorer Friday',
+    tagline: 'Discover animal pack names & count shiny coins!',
+    reading: { appId: 'group-names', title: 'Group Names', icon: '🐾', blurb: 'Match 5 animal groups and packs' },
     math: { appId: 'coin-count', title: 'Coin Comparison', icon: '🪙', blurb: 'Compare 5 coin piles' },
   },
   {
@@ -131,6 +131,50 @@ function removeStorageItem(key: string): void {
     }
   } catch {
     /* ignore */
+  }
+}
+
+const historyKey = (profileId: string) => `rlw.voyage.history.${profileId}`;
+
+export function recordVoyageTrackPick(profileId: string, track: 'reading' | 'math') {
+  try {
+    const raw = getStorageItem(historyKey(profileId));
+    const history: string[] = raw ? JSON.parse(raw) : [];
+    history.push(track);
+    const trimmed = history.slice(-10);
+    setStorageItem(historyKey(profileId), JSON.stringify(trimmed));
+  } catch {
+    // ignore
+  }
+}
+
+export interface TrackNudge {
+  recommendedTrack: 'reading' | 'math';
+  reason: string;
+}
+
+export function getTrackNudge(profileId: string): TrackNudge | null {
+  try {
+    const raw = getStorageItem(historyKey(profileId));
+    if (!raw) return null;
+    const history: string[] = JSON.parse(raw);
+    if (history.length < 2) return null;
+    const lastTwo = history.slice(-2);
+    if (lastTwo.every((t) => t === 'math')) {
+      return {
+        recommendedTrack: 'reading',
+        reason: "You've been a Math Master! Ready to test your super Reading powers today? 📖",
+      };
+    }
+    if (lastTwo.every((t) => t === 'reading')) {
+      return {
+        recommendedTrack: 'math',
+        reason: "You've been a Reading Champion! Ready to test your super Math skills today? 🔢",
+      };
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 

@@ -51,10 +51,9 @@ export function ThemePickerModal({
   };
 
   const handleSelect = (t: Theme) => {
+    stopSpeaking();
     sfx.good();
     onSelect(t.id);
-    const quote = SAMPLE_QUOTES[t.id] ?? t.praise[0] ?? 'Hello!';
-    void speakThemeGreeting(t.id, childName || 'Rowan', quote.replaceAll('{name}', childName || 'Rowan'));
     onClose();
   };
 

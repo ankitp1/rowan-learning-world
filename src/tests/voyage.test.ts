@@ -7,7 +7,15 @@ import {
   unlockVoyageToday,
   relockVoyageToday,
   clearVoyageStorage,
+  recordVoyageTrackPick,
+  getTrackNudge,
 } from '../core/voyage';
+import {
+  getTodayQuest,
+  isQuestDoneToday,
+  markQuestDoneToday,
+  REAL_WORLD_QUESTS,
+} from '../core/realWorldQuests';
 
 describe('Daily Voyage and Weekly Routine System', () => {
   beforeEach(() => {
@@ -55,10 +63,10 @@ describe('Daily Voyage and Weekly Routine System', () => {
     expect(thu.reading.appId).toBe('sight-cannon');
     expect(thu.math.appId).toBe('sneaky-thief');
 
-    // Friday (5)
+    // Friday (5) - Free Explorer Friday with Group Names
     const fri = getTodayRoutine(5);
     expect(fri.dayName).toBe('Friday');
-    expect(fri.reading.appId).toBe('captains-log');
+    expect(fri.reading.appId).toBe('group-names');
     expect(fri.math.appId).toBe('coin-count');
 
     // Saturday (6)
@@ -92,5 +100,38 @@ describe('Daily Voyage and Weekly Routine System', () => {
 
     relockVoyageToday('p1', '2026-11-22');
     expect(isVoyageUnlocked('p1', '2026-11-22')).toBe(false);
+  });
+
+  it('nudges alternate track when child repeatedly picks the same subject', () => {
+    // No picks yet
+    expect(getTrackNudge('p1')).toBeNull();
+
+    // 1 pick of math
+    recordVoyageTrackPick('p1', 'math');
+    expect(getTrackNudge('p1')).toBeNull();
+
+    // 2 consecutive picks of math -> nudges reading
+    recordVoyageTrackPick('p1', 'math');
+    const readingNudge = getTrackNudge('p1');
+    expect(readingNudge?.recommendedTrack).toBe('reading');
+    expect(readingNudge?.reason).toContain('Math Master');
+
+    // 2 consecutive picks of reading -> nudges math
+    recordVoyageTrackPick('p1', 'reading');
+    recordVoyageTrackPick('p1', 'reading');
+    const mathNudge = getTrackNudge('p1');
+    expect(mathNudge?.recommendedTrack).toBe('math');
+    expect(mathNudge?.reason).toContain('Reading Champion');
+  });
+
+  it('provides rich real-world quests with completion tracking', () => {
+    expect(REAL_WORLD_QUESTS.length).toBeGreaterThanOrEqual(10);
+    const q = getTodayQuest();
+    expect(q.prompt).toBeTruthy();
+    expect(q.examples).toBeTruthy();
+
+    expect(isQuestDoneToday('p1', '2026-11-22')).toBe(false);
+    markQuestDoneToday('p1', '2026-11-22');
+    expect(isQuestDoneToday('p1', '2026-11-22')).toBe(true);
   });
 });

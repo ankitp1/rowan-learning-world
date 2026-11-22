@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { frontier } from '../core/engine';
 import { patchProfile } from '../core/db';
 import { APPS } from '../core/registry';
-import { sfx, speak, speakThemeGreeting } from '../core/speech';
+import { sfx, speak, speakThemeGreeting, stopSpeaking } from '../core/speech';
 import { THEMES, themeById } from '../core/themes';
 import type { MiniApp, Profile, Subject, Theme } from '../core/types';
 import { isVoiceSupported, toggleVoiceListening, useVoice } from '../core/voice';
 import { focusFirst, useBackHandler } from '../core/nav';
 import { getTodayRoutine, isVoyageUnlocked, unlockVoyageToday, type DayRoutine } from '../core/voyage';
+import { getTodayQuest, isQuestDoneToday } from '../core/realWorldQuests';
+import { RealWorldQuestModal } from './RealWorldQuestModal';
 import { AgeOnboardingModal } from '../ui/AgeOnboarding';
 import { HelperAvatar, IslandBase, MapTrail } from '../ui/Art';
 import { HubOptionsModal } from '../ui/HubOptionsModal';
@@ -82,14 +84,22 @@ export default function Hub({
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [lockedModal, setLockedModal] = useState(false);
   const [showAdultGate, setShowAdultGate] = useState(false);
+  const [showQuestModal, setShowQuestModal] = useState(false);
   const routine = useMemo(() => getTodayRoutine(), []);
+  const todayQuest = useMemo(() => getTodayQuest(), []);
   const [unlocked, setUnlocked] = useState(() => isVoyageUnlocked(profile.id));
+  const [questDone, setQuestDone] = useState(() => isQuestDoneToday(profile.id));
   const dwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const onUnlockEvent = () => setUnlocked(true);
+    const onQuestEvent = () => setQuestDone(true);
     window.addEventListener('voyage:unlocked', onUnlockEvent);
-    return () => window.removeEventListener('voyage:unlocked', onUnlockEvent);
+    window.addEventListener('quest:completed', onQuestEvent);
+    return () => {
+      window.removeEventListener('voyage:unlocked', onUnlockEvent);
+      window.removeEventListener('quest:completed', onQuestEvent);
+    };
   }, []);
 
   const handleIslandClick = (key: IslandKey) => {
@@ -152,6 +162,12 @@ export default function Hub({
   }, [profile.settings?.allowedThemes]);
 
   const selectTheme = (themeId: string) => {
+    stopSpeaking();
+    try {
+      sessionStorage.removeItem(`rlw.greeted.${profile.id}.${themeId}`);
+    } catch {
+      // ignore
+    }
     patchProfile(profile.id, (p) => {
       p.themeId = themeId;
       // If allowedThemes had legacy values, make sure the chosen theme is unlocked
@@ -204,8 +220,8 @@ export default function Hub({
       </header>
       {/* Straight-line Two-Tier Layout (Page 5 design spec) */}
       <div className="hub-grid-layout">
-        {/* Row 1: Today's Daily Voyage Hero Card & Adventure Mission Card */}
-        <div className="hub-hero-row" style={{ width: '100%', maxWidth: '1400px', display: 'flex', gap: '20px', alignItems: 'stretch' }}>
+        {/* Row 1: Today's Daily Voyage Hero Card, Real-World Quest & Adventure Mission Card */}
+        <div className="hub-hero-row" style={{ width: '100%', maxWidth: '1460px', display: 'flex', gap: '16px', alignItems: 'stretch' }}>
           <button
             className="hub-mission-card"
             data-autofocus={!lastIsland ? '' : undefined}
@@ -213,7 +229,7 @@ export default function Hub({
             onFocus={() => onDwell(`Today's Voyage: ${routine.dayName}, ${routine.title}`)}
             onBlur={onLeave}
             aria-label={`Today's Voyage: ${routine.dayName}, ${routine.title}`}
-            style={{ flex: '3 1 0', minWidth: '0' }}
+            style={{ flex: '2.4 1 0', minWidth: '0' }}
           >
             <div className="mission-art-box">
               <span className="mission-badge-emoji">{routine.reading.icon}</span>
@@ -228,7 +244,7 @@ export default function Hub({
                   </span>
                 ) : (
                   <span className="chip" style={{ background: '#fff3cd', color: '#856404', fontSize: '13px', padding: '2px 8px', height: 'auto', minHeight: 'unset' }}>
-                    🔒 5/5 Needed for Games
+                    🔒 Play Voyage to Unlock Games
                   </span>
                 )}
               </div>
@@ -245,22 +261,57 @@ export default function Hub({
 
           <button
             className="hub-mission-card mission-secondary-card"
+            onClick={() => setShowQuestModal(true)}
+            onFocus={() => onDwell(`Real-World Quest: ${todayQuest.title}`)}
+            onBlur={onLeave}
+            aria-label={`Real-World Quest: ${todayQuest.title} - Find things at home`}
+            style={{
+              flex: '1.2 1 240px',
+              maxWidth: '340px',
+              padding: '18px 20px',
+              border: questDone ? '3px solid #86efac' : '3px solid #fde047',
+              background: questDone ? 'linear-gradient(175deg, rgba(240, 253, 244, 0.95) 0%, rgba(220, 252, 231, 0.95) 100%)' : undefined,
+            }}
+          >
+            <div className="mission-art-box" style={{ width: '74px', height: '74px' }}>
+              <span className="mission-badge-emoji" style={{ fontSize: '36px' }}>{todayQuest.icon}</span>
+            </div>
+            <div className="mission-details" style={{ textAlign: 'left' }}>
+              <div className="row align-center gap-6" style={{ justifyContent: 'flex-start' }}>
+                <span className="mission-tag" style={{ fontSize: '11px', background: '#e0f2fe', color: '#0369a1' }}>
+                  🏡 REAL-WORLD
+                </span>
+                {questDone && (
+                  <span className="chip" style={{ fontSize: '11px', background: '#dcfce7', color: '#166534', padding: '1px 6px', height: 'auto', minHeight: 'unset' }}>
+                    ⭐ Done!
+                  </span>
+                )}
+              </div>
+              <h3 style={{ margin: '3px 0 2px', fontSize: '17px', fontWeight: 700 }}>{todayQuest.title}</h3>
+              <div className="mission-play-prompt" style={{ padding: '0', background: 'none' }}>
+                <b style={{ fontSize: '14px', color: '#0284c7' }}>{questDone ? 'View Quest ▶' : 'Explore Quest ▶'}</b>
+              </div>
+            </div>
+          </button>
+
+          <button
+            className="hub-mission-card mission-secondary-card"
             onClick={onMission}
             onFocus={() => onDwell("Start a mission - 5 activities and a treasure chest")}
             onBlur={onLeave}
             aria-label="Start a mission - 5 quick jobs to earn stickers"
-            style={{ flex: '1 1 280px', maxWidth: '340px', padding: '20px' }}
+            style={{ flex: '1.1 1 220px', maxWidth: '320px', padding: '18px 20px' }}
           >
-            <div className="mission-art-box" style={{ width: '80px', height: '80px' }}>
-              <span className="mission-badge-emoji" style={{ fontSize: '38px' }}>🗺️</span>
+            <div className="mission-art-box" style={{ width: '74px', height: '74px' }}>
+              <span className="mission-badge-emoji" style={{ fontSize: '36px' }}>🗺️</span>
             </div>
             <div className="mission-details" style={{ textAlign: 'left' }}>
-              <span className="mission-tag" style={{ fontSize: '12px' }}>★ MISSION</span>
-              <h3 style={{ margin: '4px 0 2px', fontSize: '18px', fontWeight: 700 }}>
+              <span className="mission-tag" style={{ fontSize: '11px' }}>★ MISSION</span>
+              <h3 style={{ margin: '3px 0 2px', fontSize: '17px', fontWeight: 700 }}>
                 {theme.mapTitle.replaceAll('{name}', profile.name || 'Rowan')}
               </h3>
               <div className="mission-play-prompt" style={{ padding: '0', background: 'none' }}>
-                <b style={{ fontSize: '15px', color: 'var(--primary)' }}>Start a mission ▶</b>
+                <b style={{ fontSize: '14px', color: 'var(--primary)' }}>Start a mission ▶</b>
               </div>
             </div>
           </button>
@@ -344,6 +395,13 @@ export default function Hub({
             void speak('Games Island has been unlocked by a grown-up!');
             onIsland('games');
           }}
+        />
+      )}
+      {showQuestModal && (
+        <RealWorldQuestModal
+          profile={profile}
+          theme={theme}
+          onClose={() => setShowQuestModal(false)}
         />
       )}
       {book && <StickerBook profile={profile} theme={theme} onClose={() => setBook(false)} />}

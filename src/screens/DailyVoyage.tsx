@@ -1,9 +1,15 @@
-import { Suspense, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { awardStars } from '../core/engine';
 import { appById } from '../core/registry';
 import { sfx, speak, speakThemePraise, stopSpeaking } from '../core/speech';
 import type { MiniAppProps, Profile, RoundResult, Theme } from '../core/types';
-import { getTodayRoutine, isVoyageUnlocked, unlockVoyageToday } from '../core/voyage';
+import {
+  getTodayRoutine,
+  getTrackNudge,
+  isVoyageUnlocked,
+  recordVoyageTrackPick,
+  unlockVoyageToday,
+} from '../core/voyage';
 import { Confetti, HelperAvatar } from '../ui/Art';
 import Gate from './parent/Gate';
 
@@ -17,8 +23,10 @@ interface DailyVoyageProps {
 
 export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initialTrack }: DailyVoyageProps) {
   const routine = useMemo(() => getTodayRoutine(), []);
+  const nudge = useMemo(() => getTrackNudge(profile.id), [profile.id]);
   const [track, setTrack] = useState<'reading' | 'math' | null>(initialTrack ?? null);
   const [result, setResult] = useState<RoundResult | null>(null);
+  const [attemptCount, setAttemptCount] = useState(1);
   const [showGate, setShowGate] = useState(false);
   const [runKey, setRunKey] = useState(0);
   const alreadyUnlocked = isVoyageUnlocked(profile.id);
@@ -28,25 +36,37 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
 
   const startTrack = (chosenTrack: 'reading' | 'math') => {
     stopSpeaking();
+    recordVoyageTrackPick(profile.id, chosenTrack);
     setResult(null);
     setTrack(chosenTrack);
     const chosen = chosenTrack === 'reading' ? routine.reading : routine.math;
-    void speak(`Starting ${chosen.title}! Get 5 out of 5 to unlock the games!`);
+    void speak(`Starting ${chosen.title}! Let's do 5 questions!`);
   };
 
   const handleComplete = (r: RoundResult) => {
     setResult(r);
     stopSpeaking();
-    if (r.correct === r.total) {
+    const isPerfection = r.correct === r.total;
+    const isRetryPass = attemptCount >= 2;
+
+    if (isPerfection) {
       sfx.chest();
       awardStars(profile.id, 5);
       unlockVoyageToday(profile.id);
       void speakThemePraise(theme, undefined, profile.name).then(() => {
-        void speak(`Incredible! 5 out of 5! The Games Island is unlocked for today!`);
+        void speak(`Incredible! 5 out of 5! The Games Island is unlocked for today! Plus 5 bonus stars!`);
+      });
+    } else if (isRetryPass) {
+      // Rewarding effort and grit: Rowan tried again and didn't give up!
+      sfx.star();
+      awardStars(profile.id, 2);
+      unlockVoyageToday(profile.id);
+      void speakThemePraise(theme, undefined, profile.name).then(() => {
+        void speak(`Awesome grit, ${profile.name}! You didn't give up and tried again! Games Island is UNLOCKED for today! Plus 2 perseverance stars!`);
       });
     } else {
       sfx.soft();
-      void speak(`Good effort, ${profile.name}! You got ${r.correct} of ${r.total}. Let's try again for 5 out of 5!`);
+      void speak(`Great effort, ${profile.name}! You got ${r.correct} of ${r.total}. Let's try again! Practice builds our brain power!`);
     }
   };
 
@@ -60,31 +80,41 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
 
   // 1. Result screen after finishing the 5 questions
   if (result && track) {
-    const won = result.correct === result.total;
+    const isPerfection = result.correct === result.total;
+    const isRetryPass = attemptCount >= 2;
+    const unlockedNow = isPerfection || isRetryPass;
     const currentTrackInfo = track === 'reading' ? routine.reading : routine.math;
     const otherTrack = track === 'reading' ? 'math' : 'reading';
     const otherTrackInfo = otherTrack === 'reading' ? routine.reading : routine.math;
 
     return (
       <div className={`screen mission finale theme-${theme.id}`}>
-        {won && <Confetti />}
-        <HelperAvatar theme={theme} size={130} mood={won ? 'cheer' : 'talking'} />
+        {unlockedNow && <Confetti />}
+        <HelperAvatar theme={theme} size={130} mood={unlockedNow ? 'cheer' : 'talking'} />
         <div className="card text-center" style={{ maxWidth: '640px', margin: '16px auto', padding: '24px' }}>
-          <div className="big-emoji">{won ? '🌟🎉' : '💪'}</div>
-          <h1>{won ? '5 out of 5 Perfect!' : `${result.correct} of ${result.total}`}</h1>
+          <div className="big-emoji">{isPerfection ? '🌟🎉' : isRetryPass ? '💪⭐' : '💪'}</div>
+          <h1>
+            {isPerfection
+              ? '5 out of 5 Perfect!'
+              : isRetryPass
+              ? 'Super Grit & Effort!'
+              : `${result.correct} of ${result.total}`}
+          </h1>
           <p style={{ fontSize: '20px', margin: '8px 0 16px' }}>
-            {won
-              ? `Amazing work, ${profile.name}! You completed today's ${currentTrackInfo.title} and unlocked Games Island! +5 Bonus Stars! ⭐`
-              : `So close! You need 5 out of 5 in Reading or Math to unlock Games Island. You can try again right now!`}
+            {isPerfection
+              ? `Amazing work, ${profile.name}! You completed today's ${currentTrackInfo.title} with 5 out of 5 and unlocked Games Island! +5 Bonus Stars! ⭐`
+              : isRetryPass
+              ? `Awesome perseverance, ${profile.name}! You kept trying and didn't give up! Games Island is UNLOCKED for today! +2 Perseverance Stars! ⭐`
+              : `Great effort, ${profile.name}! You got ${result.correct} of ${result.total}. Try again to earn Perseverance Stars and unlock Games Island!`}
           </p>
 
           <div className="row justify-center gap-12" style={{ flexWrap: 'wrap', marginTop: '16px' }}>
-            {won ? (
+            {unlockedNow ? (
               <>
                 <button className="btn primary big" data-autofocus onClick={onUnlocked}>
                   🎮 Go to Games Island
                 </button>
-                <button className="btn" onClick={() => startTrack(otherTrack)}>
+                <button className="btn" onClick={() => { setAttemptCount(1); startTrack(otherTrack); }}>
                   {otherTrackInfo.icon} Do {otherTrackInfo.title} Too
                 </button>
                 <button className="btn" onClick={onExit}>
@@ -93,10 +123,18 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
               </>
             ) : (
               <>
-                <button className="btn primary big" data-autofocus onClick={() => { setRunKey((k) => k + 1); setResult(null); }}>
-                  🔁 Try {currentTrackInfo.title} Again
+                <button
+                  className="btn primary big"
+                  data-autofocus
+                  onClick={() => {
+                    setAttemptCount((c) => c + 1);
+                    setRunKey((k) => k + 1);
+                    setResult(null);
+                  }}
+                >
+                  🔁 Try Again (+2 Grit Stars! ⭐)
                 </button>
-                <button className="btn" onClick={() => startTrack(otherTrack)}>
+                <button className="btn" onClick={() => { setAttemptCount(1); startTrack(otherTrack); }}>
                   {otherTrackInfo.icon} Switch to {otherTrackInfo.title}
                 </button>
                 <button className="btn" onClick={() => setShowGate(true)}>
@@ -146,8 +184,25 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
           {routine.dayName} Daily Voyage
         </h1>
         <p style={{ fontSize: '20px', opacity: 0.9 }}>
-          Get <b>5 out of 5</b> in <b>Reading OR Math</b> to unlock Games Island for today!
+          Choose <b>Reading OR Math</b> to complete today's Voyage and unlock Games Island!
         </p>
+        {nudge && (
+          <div
+            className="chip"
+            style={{
+              background: '#fef3c7',
+              color: '#92400e',
+              fontWeight: 600,
+              fontSize: '15px',
+              padding: '6px 16px',
+              margin: '8px auto 4px',
+              borderRadius: '18px',
+              display: 'inline-block',
+            }}
+          >
+            💡 {nudge.reason}
+          </div>
+        )}
         {alreadyUnlocked && (
           <div className="chip" style={{ display: 'inline-block', margin: '8px 0', background: '#d4edda', color: '#155724', fontWeight: 'bold' }}>
             🎉 Games Island is already UNLOCKED for today!
@@ -159,14 +214,14 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
         {/* Reading Track Option */}
         <button
           className="app-card"
-          data-autofocus
+          data-autofocus={!nudge || nudge.recommendedTrack === 'reading'}
           style={{
             flex: '1 1 340px',
             maxWidth: '380px',
             padding: '24px',
             textAlign: 'left',
             borderRadius: '24px',
-            border: '3px solid #ffc27a',
+            border: nudge?.recommendedTrack === 'reading' ? '4px solid #f59e0b' : '3px solid #ffc27a',
             background: 'var(--panel)',
             cursor: 'pointer',
           }}
@@ -175,9 +230,16 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
           <div className="row align-center gap-12" style={{ marginBottom: '12px' }}>
             <span style={{ fontSize: '48px' }}>{routine.reading.icon}</span>
             <div>
-              <span className="chip" style={{ fontSize: '13px', background: '#f6d98a', color: '#523c00' }}>
-                📖 Reading Track
-              </span>
+              <div className="row align-center gap-6" style={{ justifyContent: 'flex-start' }}>
+                <span className="chip" style={{ fontSize: '13px', background: '#f6d98a', color: '#523c00' }}>
+                  📖 Reading Track
+                </span>
+                {nudge?.recommendedTrack === 'reading' && (
+                  <span className="chip" style={{ fontSize: '11px', background: '#fef08a', color: '#854d0e', fontWeight: 700 }}>
+                    ⭐ Recommended
+                  </span>
+                )}
+              </div>
               <h3 style={{ fontSize: '22px', margin: '4px 0 0' }}>{routine.reading.title}</h3>
             </div>
           </div>
@@ -185,7 +247,7 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
             {routine.reading.blurb}
           </p>
           <div className="row justify-between align-center">
-            <span style={{ fontWeight: 600, fontSize: '15px' }}>🎯 Goal: 5 / 5 correct</span>
+            <span style={{ fontWeight: 600, fontSize: '15px' }}>🎯 5 questions</span>
             <span className="btn primary" style={{ padding: '8px 18px', fontSize: '16px' }}>
               Start ▶
             </span>
@@ -195,13 +257,14 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
         {/* Math Track Option */}
         <button
           className="app-card"
+          data-autofocus={nudge?.recommendedTrack === 'math'}
           style={{
             flex: '1 1 340px',
             maxWidth: '380px',
             padding: '24px',
             textAlign: 'left',
             borderRadius: '24px',
-            border: '3px solid #9fe3b8',
+            border: nudge?.recommendedTrack === 'math' ? '4px solid #10b981' : '3px solid #9fe3b8',
             background: 'var(--panel)',
             cursor: 'pointer',
           }}
@@ -210,9 +273,16 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
           <div className="row align-center gap-12" style={{ marginBottom: '12px' }}>
             <span style={{ fontSize: '48px' }}>{routine.math.icon}</span>
             <div>
-              <span className="chip" style={{ fontSize: '13px', background: '#9fe3b8', color: '#0f4d2a' }}>
-                🔢 Math Track
-              </span>
+              <div className="row align-center gap-6" style={{ justifyContent: 'flex-start' }}>
+                <span className="chip" style={{ fontSize: '13px', background: '#9fe3b8', color: '#0f4d2a' }}>
+                  🔢 Math Track
+                </span>
+                {nudge?.recommendedTrack === 'math' && (
+                  <span className="chip" style={{ fontSize: '11px', background: '#a7f3d0', color: '#065f46', fontWeight: 700 }}>
+                    ⭐ Recommended
+                  </span>
+                )}
+              </div>
               <h3 style={{ fontSize: '22px', margin: '4px 0 0' }}>{routine.math.title}</h3>
             </div>
           </div>
@@ -220,7 +290,7 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
             {routine.math.blurb}
           </p>
           <div className="row justify-between align-center">
-            <span style={{ fontWeight: 600, fontSize: '15px' }}>🎯 Goal: 5 / 5 correct</span>
+            <span style={{ fontWeight: 600, fontSize: '15px' }}>🎯 5 questions</span>
             <span className="btn primary" style={{ padding: '8px 18px', fontSize: '16px' }}>
               Start ▶
             </span>
