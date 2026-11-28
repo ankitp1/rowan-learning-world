@@ -229,35 +229,60 @@ export default function Hub({
             onFocus={() => onDwell(`Today's Voyage: ${routine.dayName}, ${routine.title}`)}
             onBlur={onLeave}
             aria-label={`Today's Voyage: ${routine.dayName}, ${routine.title}`}
-            style={{ flex: '2.4 1 0', minWidth: '0' }}
+            style={{
+              flex: '2.2 1 360px',
+              minWidth: '320px',
+              padding: '18px 24px',
+              gap: '18px',
+              display: 'flex',
+              alignItems: 'center',
+            }}
           >
-            <div className="mission-art-box">
-              <span className="mission-badge-emoji">{routine.reading.icon}</span>
-              <span className="mission-map-icon">⛵</span>
+            <div className="mission-art-box" style={{ width: '84px', height: '84px', flexShrink: 0 }}>
+              <span className="mission-badge-emoji" style={{ fontSize: '42px' }}>
+                {routine.isFreeChoice ? '🧭' : routine.reading.icon}
+              </span>
+              <span className="mission-map-icon" style={{ fontSize: '24px' }}>⛵</span>
             </div>
-            <div className="mission-details">
-              <div className="row align-center gap-8" style={{ marginBottom: '4px', justifyContent: 'flex-start' }}>
-                <span className="mission-tag">⛵ {routine.dayName}'s Daily Voyage</span>
-                {unlocked ? (
-                  <span className="chip" style={{ background: '#d4edda', color: '#155724', fontSize: '13px', padding: '2px 8px', height: 'auto', minHeight: 'unset' }}>
-                    🎉 Games Unlocked
-                  </span>
-                ) : (
-                  <span className="chip" style={{ background: '#fff3cd', color: '#856404', fontSize: '13px', padding: '2px 8px', height: 'auto', minHeight: 'unset' }}>
-                    🔒 Play Voyage to Unlock Games
-                  </span>
-                )}
+            <div className="mission-details" style={{ flex: '1', minWidth: '0', textAlign: 'left' }}>
+              <div className="row align-center gap-8" style={{ marginBottom: '6px', flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+                <span className="mission-tag" style={{ fontSize: '13px', letterSpacing: '1px' }}>
+                  ⛵ {routine.dayName.toUpperCase()}'S DAILY VOYAGE
+                </span>
+                <span
+                  className="badge-pill"
+                  style={{
+                    background: unlocked ? '#d4edda' : '#fef3c7',
+                    color: unlocked ? '#155724' : '#92400e',
+                    border: unlocked ? '1px solid #bbf7d0' : '1px solid #fde68a',
+                    fontSize: '12px',
+                    padding: '3px 10px',
+                  }}
+                >
+                  {unlocked ? '🎉 Games Unlocked' : '🔒 Play to Unlock Games'}
+                </span>
               </div>
-              <h2 className="mission-title">{routine.title}</h2>
-              {!routine.isFreeChoice && routine.tagline ? (
-                <p style={{ margin: '4px 0 0', fontSize: '16px', opacity: 0.88 }}>
-                  {routine.tagline} (Choose 📖 <b>{routine.reading.title}</b> or 🔢 <b>{routine.math.title}</b>)
-                </p>
-              ) : null}
+              <h2 className="mission-title" style={{ fontSize: '26px', margin: '0 0 4px', lineHeight: 1.2 }}>
+                {routine.title}
+              </h2>
+              <p style={{ margin: '0', fontSize: '14px', opacity: 0.85, fontWeight: 500 }}>
+                {routine.isFreeChoice
+                  ? (unlocked ? 'Keep exploring! Pick any game you want.' : 'Choose any game to complete today’s voyage!')
+                  : `${routine.tagline} (📖 ${routine.reading.title} or 🔢 ${routine.math.title})`}
+              </p>
             </div>
-            <div className="mission-play-prompt">
-              <span className="play-triangle">▶</span>
-              <b>{unlocked ? 'Play Again' : 'Start Voyage'}</b>
+            <div
+              className="mission-play-prompt"
+              style={{
+                padding: '12px 22px',
+                fontSize: '18px',
+                borderRadius: '30px',
+                flexShrink: 0,
+                gap: '8px',
+              }}
+            >
+              <span className="play-triangle" style={{ fontSize: '16px' }}>▶</span>
+              <b>{unlocked ? 'Play' : 'Start'}</b>
             </div>
           </button>
 

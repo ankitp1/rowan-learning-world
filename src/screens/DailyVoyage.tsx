@@ -197,37 +197,63 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
       <header className="topbar" style={{ width: '100%', maxWidth: '980px', margin: '0 auto 12px' }}>
         <button className="back" onClick={onExit} aria-label="Back to Map">⬅</button>
         <h2 style={{ fontSize: '24px' }}>⛵ {routine.title}</h2>
-        <span className="chip" style={{ fontSize: '16px' }}>⭐ {profile.stars}</span>
+        <span
+          className="badge-pill"
+          style={{
+            background: 'rgba(0,0,0,0.35)',
+            color: '#fff',
+            fontSize: '15px',
+            padding: '4px 14px',
+            borderRadius: '20px',
+          }}
+        >
+          ⭐ {profile.stars}
+        </span>
       </header>
 
-      <div style={{ textAlign: 'center', maxWidth: '820px', margin: '0 auto 16px' }}>
-        <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>
+      <div style={{ textAlign: 'center', maxWidth: '820px', margin: '0 auto 12px' }}>
+        <h1 style={{ fontSize: '28px', marginBottom: '6px' }}>
           {routine.title}
         </h1>
-        {!routine.isFreeChoice && (
-          <p style={{ fontSize: '20px', opacity: 0.9 }}>
+        {routine.isFreeChoice ? (
+          <p style={{ fontSize: '18px', opacity: 0.9, margin: '2px 0 0' }}>
+            Choose any game to complete today's Voyage and unlock Games Island!
+          </p>
+        ) : (
+          <p style={{ fontSize: '18px', opacity: 0.9, margin: '2px 0 0' }}>
             Choose Reading OR Math to complete today's Voyage and unlock Games Island!
           </p>
         )}
         {nudge && (
           <div
-            className="chip"
+            className="badge-pill"
             style={{
               background: '#fef3c7',
               color: '#92400e',
               fontWeight: 600,
-              fontSize: '15px',
+              fontSize: '14px',
               padding: '6px 16px',
               margin: '8px auto 4px',
               borderRadius: '18px',
-              display: 'inline-block',
+              display: 'inline-flex',
             }}
           >
             💡 {nudge.reason}
           </div>
         )}
         {alreadyUnlocked && (
-          <div className="chip" style={{ display: 'inline-block', margin: '8px 0', background: '#d4edda', color: '#155724', fontWeight: 'bold' }}>
+          <div
+            className="badge-pill"
+            style={{
+              display: 'inline-flex',
+              margin: '8px 0',
+              background: '#d4edda',
+              color: '#155724',
+              fontWeight: 'bold',
+              padding: '6px 16px',
+              fontSize: '14px',
+            }}
+          >
             🎉 Games Island is already UNLOCKED for today!
           </div>
         )}
@@ -235,12 +261,12 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
 
       {/* --- WEEKEND FREE CHOICE PICKER (Friday, Saturday, Sunday) --- */}
       {routine.isFreeChoice ? (
-        <div style={{ maxWidth: '960px', width: '100%', margin: '0 auto 24px' }}>
-          <div className="row justify-between align-center" style={{ marginBottom: '14px', padding: '0 8px' }}>
-            <span style={{ fontSize: '20px', fontWeight: 700 }}>Choose any game:</span>
+        <div style={{ maxWidth: '1020px', width: '100%', margin: '0 auto 16px' }}>
+          <div className="row justify-between align-center" style={{ marginBottom: '10px', padding: '0 8px' }}>
+            <span style={{ fontSize: '17px', fontWeight: 700 }}>Choose any 1 of 10 adventures:</span>
             <button
               className="btn primary"
-              style={{ padding: '6px 18px', fontSize: '15px', minHeight: '40px' }}
+              style={{ padding: '6px 18px', fontSize: '15px', minHeight: '38px', borderRadius: '20px' }}
               onClick={handleRandomSurprise}
             >
               🎲 Surprise Pick!
@@ -250,11 +276,9 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '14px',
-              maxHeight: '460px',
-              overflowY: 'auto',
-              padding: '6px',
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: '12px',
+              padding: '8px 4px',
             }}
           >
             {ALL_VOYAGE_APPS.map((app, idx) => (
@@ -263,35 +287,37 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
                 className="app-card"
                 data-autofocus={idx === 0 ? '' : undefined}
                 style={{
-                  padding: '16px',
-                  textAlign: 'left',
+                  minHeight: 'unset',
+                  height: '116px',
+                  padding: '12px 10px',
+                  textAlign: 'center',
                   borderRadius: '20px',
                   border: app.track === 'reading' ? '3px solid #f6d98a' : '3px solid #9fe3b8',
                   background: 'var(--panel)',
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '8px',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  boxSizing: 'border-box',
                 }}
                 onClick={() => startCustomApp(app.appId, app.track)}
               >
-                <div className="row align-center justify-between">
-                  <span style={{ fontSize: '38px' }}>{app.icon}</span>
-                  <span
-                    className="chip"
-                    style={{
-                      fontSize: '11px',
-                      background: app.track === 'reading' ? '#fef3c7' : '#d1fae5',
-                      color: app.track === 'reading' ? '#92400e' : '#065f46',
-                      padding: '2px 8px',
-                      height: 'auto',
-                      minHeight: 'unset',
-                    }}
-                  >
-                    {app.track === 'reading' ? '📖 Reading' : '🔢 Math'}
-                  </span>
-                </div>
-                <h4 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: 700 }}>{app.title}</h4>
+                <span style={{ fontSize: '38px', lineHeight: 1 }}>{app.icon}</span>
+                <b style={{ fontSize: '14px', lineHeight: 1.2, margin: '2px 0 0' }}>{app.title}</b>
+                <span
+                  className="badge-pill"
+                  style={{
+                    fontSize: '11px',
+                    background: app.track === 'reading' ? '#fef3c7' : '#d1fae5',
+                    color: app.track === 'reading' ? '#92400e' : '#065f46',
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                  }}
+                >
+                  {app.track === 'reading' ? '📖 Reading' : '🔢 Math'}
+                </span>
               </button>
             ))}
           </div>
@@ -319,11 +345,11 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
               <span style={{ fontSize: '48px' }}>{routine.reading.icon}</span>
               <div>
                 <div className="row align-center gap-6" style={{ justifyContent: 'flex-start' }}>
-                  <span className="chip" style={{ fontSize: '13px', background: '#f6d98a', color: '#523c00' }}>
+                  <span className="badge-pill" style={{ fontSize: '12px', background: '#f6d98a', color: '#523c00' }}>
                     📖 Reading Track
                   </span>
                   {nudge?.recommendedTrack === 'reading' && (
-                    <span className="chip" style={{ fontSize: '11px', background: '#fef08a', color: '#854d0e', fontWeight: 700 }}>
+                    <span className="badge-pill" style={{ fontSize: '11px', background: '#fef08a', color: '#854d0e', fontWeight: 700 }}>
                       ⭐ Recommended
                     </span>
                   )}
@@ -362,11 +388,11 @@ export default function DailyVoyage({ profile, theme, onExit, onUnlocked, initia
               <span style={{ fontSize: '48px' }}>{routine.math.icon}</span>
               <div>
                 <div className="row align-center gap-6" style={{ justifyContent: 'flex-start' }}>
-                  <span className="chip" style={{ fontSize: '13px', background: '#9fe3b8', color: '#0f4d2a' }}>
+                  <span className="badge-pill" style={{ fontSize: '12px', background: '#9fe3b8', color: '#0f4d2a' }}>
                     🔢 Math Track
                   </span>
                   {nudge?.recommendedTrack === 'math' && (
-                    <span className="chip" style={{ fontSize: '11px', background: '#a7f3d0', color: '#065f46', fontWeight: 700 }}>
+                    <span className="badge-pill" style={{ fontSize: '11px', background: '#a7f3d0', color: '#065f46', fontWeight: 700 }}>
                       ⭐ Recommended
                     </span>
                   )}

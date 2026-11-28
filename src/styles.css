@@ -718,6 +718,23 @@ input, select { font: inherit; padding: 10px 14px; border-radius: 16px; border: 
 .chip { width: 50px; height: 50px; border-radius: 50%; background: var(--panel); border: 2px solid rgba(255,255,255,.4); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 24px; }
 .chip.got { background: var(--primary); color: #1a1a1a; } .chip.next { outline: 4px solid #fff; }
 
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  width: auto !important;
+  height: auto !important;
+  min-height: unset !important;
+  box-sizing: border-box;
+}
+
 /* ---------- tic-tac-toe ---------- */
 .ttt-wrap { display: flex; justify-content: center; align-items: center; width: 100%; padding: 8px 0; }
 .ttt-grid {
@@ -3162,6 +3179,13 @@ table.skills { width: 100%; border-collapse: collapse; font-size: 16px; } table.
   width: 56px !important;
   height: 56px !important;
   font-size: 26px !important;
+}
+
+.tv-mode .badge-pill {
+  width: auto !important;
+  height: auto !important;
+  font-size: 14px !important;
+  padding: 4px 14px !important;
 }
 
 .tv-mode .chip-btn {
